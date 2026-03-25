@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { CONTAINERS } from './lib/containers';
 import { calculateHeterogeneousPacking } from './lib/packer';
-import type { PacklistItem, PackagingType, PriorityLevel, PackedItemInfo } from './lib/packer';
+import type { PacklistItem, PackagingType, PackedItemInfo } from './lib/packer';
 import { getProjects, saveProject, deleteProject } from './lib/db';
 import type { Project } from './lib/db';
 import { ContainerViews } from './components/ContainerViews';
