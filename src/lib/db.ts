@@ -1,4 +1,9 @@
+import { createClient } from '@supabase/supabase-js';
 import type { PacklistItem } from './packer';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface Project {
   id: string;
@@ -8,30 +13,30 @@ export interface Project {
   packlist: PacklistItem[];
 }
 
-const STORAGE_KEY = 'container_rechner_projects';
-
-export function getProjects(): Project[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch (e) {
+export async function getProjects(): Promise<Project[]> {
+  const { data, error } = await supabase.from('container_projects').select('*');
+  if (error) {
+    console.error('getProjects error:', error);
     return [];
   }
+  return data || [];
 }
 
-export function saveProject(project: Project): void {
-  const projects = getProjects();
-  const index = projects.findIndex(p => p.id === project.id);
-  project.updatedAt = Date.now();
-  if (index >= 0) {
-    projects[index] = project;
-  } else {
-    projects.push(project);
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+export async function saveProject(project: Project): Promise<void> {
+  const { error } = await supabase
+    .from('container_projects')
+    .upsert({
+      id: project.id,
+      name: project.name,
+      updatedAt: Date.now(),
+      containerSelection: project.containerSelection,
+      packlist: project.packlist
+    });
+  
+  if (error) console.error('saveProject error:', error);
 }
 
-export function deleteProject(id: string): void {
-  const projects = getProjects().filter(p => p.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+export async function deleteProject(id: string): Promise<void> {
+  const { error } = await supabase.from('container_projects').delete().eq('id', id);
+  if (error) console.error('deleteProject error:', error);
 }

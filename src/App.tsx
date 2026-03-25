@@ -35,7 +35,9 @@ export default function App() {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (showProjectsModal) setSavedProjects(getProjects());
+    if (showProjectsModal) {
+      getProjects().then(setSavedProjects);
+    }
   }, [showProjectsModal]);
 
   useEffect(() => {
@@ -62,8 +64,10 @@ export default function App() {
     setShowProjectsModal(false); setEditingItemId(null); setForm(DEFAULT_FORM);
   };
 
-  const handleDeleteProject = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); deleteProject(id); setSavedProjects(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProject = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); 
+    await deleteProject(id); 
+    setSavedProjects(prev => prev.filter(p => p.id !== id));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
