@@ -1,5 +1,5 @@
-import { useRef, useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { useRef, useState, useEffect, useCallback, useMemo, memo, Suspense } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text, Line, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import type { PackedItemInfo } from '../lib/packer';
@@ -43,24 +43,16 @@ function ContainerWireframe({ container }: { container: ContainerType }) {
       <Text position={[cW/2, -0.18, cL]} fontSize={0.14} color="#4a90d9" anchorX="center" anchorY="top">
         STIRNWAND / BACK
       </Text>
-      <Text position={[-0.15, cH/2, cL/2]} fontSize={0.12} color="#6b7280" anchorX="center" anchorY="middle" rotation={[0, Math.PI / 2, 0]}>
-        LINKS / LEFT
-      </Text>
-      <Text position={[cW + 0.15, cH/2, cL/2]} fontSize={0.12} color="#6b7280" anchorX="center" anchorY="middle" rotation={[0, -Math.PI / 2, 0]}>
-        RECHTS / RIGHT
-      </Text>
     </group>
   );
 }
 
-function PackedBox({ item, isActive, dimmed, onClick, showLabel }: {
+function PackedBox({ item, isActive, dimmed, onClick }: {
   item: PackedItemInfo;
   isActive: boolean;
   dimmed: boolean;
   onClick: () => void;
-  showLabel: boolean;
 }) {
-  const meshRef = useRef<THREE.Mesh>(null);
   const w = item.w * S;
   const h = item.h * S;
   const l = item.l * S;
@@ -71,7 +63,7 @@ function PackedBox({ item, isActive, dimmed, onClick, showLabel }: {
 
   return (
     <group position={[px, py, pz]}>
-      <mesh ref={meshRef} onClick={(e) => { e.stopPropagation(); onClick(); }}>
+      <mesh onClick={(e) => { e.stopPropagation(); onClick(); }}>
         <boxGeometry args={[w, h, l]} />
         <meshStandardMaterial
           color={color} transparent
@@ -84,7 +76,7 @@ function PackedBox({ item, isActive, dimmed, onClick, showLabel }: {
         <boxGeometry args={[w, h, l]} />
         <meshBasicMaterial color="#ffffff" wireframe transparent opacity={dimmed ? 0.05 : 0.3} />
       </mesh>
-      {showLabel && !dimmed && (
+      {!dimmed && (
         <Text
           position={[0, 0, l / 2 + 0.01]}
           fontSize={Math.min(w, h) * 0.4}
@@ -98,19 +90,26 @@ function PackedBox({ item, isActive, dimmed, onClick, showLabel }: {
   );
 }
 
-// Stable camera setup component
-function StableCamera({ target }: { target: THREE.Vector3 }) {
+function CameraGuard({ target }: { target: THREE.Vector3 }) {
   const { camera } = useThree();
   const initRef = useRef(false);
 
-  useEffect(() => {
+  useFrame(() => {
+    // Force initial lookAt once
     if (!initRef.current) {
       camera.position.set(8, 6, -4);
       camera.lookAt(target);
       initRef.current = true;
+      console.log("3D View [Guard]: Initial lookAt set to", target);
     }
-  }, [camera, target]);
-
+    
+    const dist = camera.position.distanceTo(target);
+    if (dist > 50 || isNaN(dist)) {
+       camera.position.set(8, 6, -4);
+       camera.lookAt(target);
+       console.warn("3D View [Guard]: Resetting camera due to drift/NaN.");
+    }
+  });
   return <PerspectiveCamera makeDefault position={[8, 6, -4]} fov={35} />;
 }
 
@@ -198,23 +197,32 @@ export const Container3DView = memo(({ container, items, lang, activeItemId, onI
         width: '100%', height: '350px', borderRadius: '12px', overflow: 'hidden',
         border: '2px solid var(--border)',
         background: 'linear-gradient(180deg, #0a0f1e 0%, #141e33 100%)',
-        cursor: 'grab'
+        cursor: 'grab', position: 'relative',
+        contain: 'strict', // HARD-STOP for ResizeObserver loops
+        minHeight: '350px',
+        maxHeight: '350px'
       }}>
-        <Canvas key="stable-3d-viewer" gl={{ antialias: true }}>
-          <StableCamera target={target} />
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[10, 10, -5]} intensity={0.8} />
-          <directionalLight position={[-5, 8, 10]} intensity={0.4} />
-          <ContainerWireframe container={container} />
-          {visibleItems.map((item) => (
-            <PackedBox key={`${item.item.id}-${item.loadingOrder}`} item={item}
-              isActive={activeItemId === item.item.id}
-              dimmed={activeItemId !== null && activeItemId !== item.item.id}
-              onClick={() => onItemClick(item.item.id)} showLabel={true} />
-          ))}
-          <OrbitControls ref={controlsRef} target={target} makeDefault
-            enableDamping={false} minDistance={2} maxDistance={20}
-          />
+        <Canvas 
+          key={`canvas-${container.id}-${items.length}`}
+          gl={{ antialias: true }}
+        >
+          <Suspense fallback={null}>
+            <CameraGuard target={target} />
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[10, 10, 10]} intensity={1} />
+            <directionalLight position={[-10, 10, -10]} intensity={0.5} />
+            <ContainerWireframe container={container} />
+            {visibleItems.map((item) => (
+              <PackedBox 
+                key={`${item.item.id}-${item.loadingOrder}`} 
+                item={item}
+                isActive={activeItemId === item.item.id}
+                dimmed={activeItemId !== null && activeItemId !== item.item.id}
+                onClick={() => onItemClick(item.item.id)} 
+              />
+            ))}
+            <OrbitControls target={target} makeDefault enableDamping={false} minDistance={1} maxDistance={100} />
+          </Suspense>
         </Canvas>
       </div>
 

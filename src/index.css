@@ -42,6 +42,9 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   padding: 2rem;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .glass-panel:hover {
@@ -182,9 +185,11 @@ p.subtitle {
 /* Grid Layout */
 .app-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 2rem;
   align-items: start;
+  width: 100%;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
