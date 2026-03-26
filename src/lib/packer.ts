@@ -86,27 +86,31 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   let bestScore = -1;
 
   for (const c of candidates) {
-    const { packedItems } = packIntoContainer3D(items, c);
+    const { packedItems, usedVolume } = packIntoContainer3D(items, c);
     
     // Calculate a score:
-    // Base score is the number of packed items (favoring completion).
-    // Plus a fractional bonus for volume utilization.
+    // Base score is the number of packed items (favoring greedy filling).
+    // Plus a completion bonus for the "perfect fit" to end the list.
     const isComplete = packedItems.length === items.length;
-    const completionBonus = isComplete ? 1000000 : 0;
-    const score = completionBonus + packedItems.length;
+    const completionBonus = isComplete ? 10000000 : 0;
+    
+    // We use a multi-level score:
+    // Millions: Completion (fits EVERYTHING left)
+    // Units: Number of items packed (Fills this container as much as possible)
+    // Fractions: Used Volume (Tie-breaker for density)
+    const score = completionBonus + packedItems.length + (usedVolume / 1e12);
 
     if (score > bestScore) {
         bestScore = score;
         bestContainer = c;
-    } else if (score === bestScore) {
-        // Tie-breaker: prefer the smaller container
+    } else if (Math.abs(score - bestScore) < 0.00001) {
+        // Tie-breaker: prefer the smaller container (cheaper)
         const currentSize = bestContainer.length * bestContainer.width * bestContainer.height;
         const candidateSize = c.length * c.width * c.height;
         if (candidateSize < currentSize) {
            bestContainer = c;
         } else if (candidateSize === currentSize) {
-           // If sizes are equal, check usedVolume specifically
-           // and favor the one with higher payload capacity
+           // If same size, prefer higher payload capacity
            if (c.maxPayload > bestContainer.maxPayload) {
               bestContainer = c;
            }
