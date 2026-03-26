@@ -94,7 +94,16 @@ export const translations = {
     view3DPresetTop: 'Oben',
     view3DPresetSide: 'Seite',
     view3DPresetFront: 'Front',
-    efficiencyExplanation: '💡 Ladelogik: Die Packstücke werden nach Priorität, dann nach Höhe (für optimale Regalbildung) und zuletzt nach Grundfläche sortiert. Schwere und hohe Stücke kommen zuerst auf den Boden, um den Schwerpunkt niedrig zu halten und die Raumhöhe maximal auszunutzen. Diese Reihenfolge gewährleistet die höchstmögliche Volumeneffizienz und Ladungsstabilität.'
+    efficiencyExplanation: '💡 Ladelogik: Die Packstücke werden nach Priorität, dann nach Höhe (für optimale Regalbildung) und zuletzt nach Grundfläche sortiert. Schwere und hohe Stücke kommen zuerst auf den Boden, um den Schwerpunkt niedrig zu halten und die Raumhöhe maximal auszunutzen. Diese Reihenfolge gewährleistet die höchstmögliche Volumeneffizienz und Ladungsstabilität.',
+    deleteConfirmTitle: 'Projekt wirklich löschen?',
+    deleteConfirmYes: 'Ja, löschen',
+    deleteConfirmNo: 'Abbrechen',
+    printBtnLabel: '🖨️ Ladeplan drucken',
+    printLoadingSeqTitle: 'Belade-Reihenfolge',
+    printContainerInfo: 'Container-Info',
+    printProjectLabel: 'Projekt',
+    printEditorLabel: 'Bearbeiter',
+    printDateLabel: 'Datum'
   },
   en: {
     appTitle: 'Container Calculator',
@@ -188,6 +197,15 @@ export const translations = {
     view3DPresetTop: 'Top',
     view3DPresetSide: 'Side',
     view3DPresetFront: 'Front',
-    efficiencyExplanation: '💡 Loading Logic: Items are sorted by priority, then height (for optimal shelf formation), and finally by footprint area. Heavy and tall items are placed on the floor first to keep the center of gravity low and maximize vertical space utilization. This sequence ensures the highest possible volume efficiency and load stability.'
+    efficiencyExplanation: '💡 Loading Logic: Items are sorted by priority, then height (for optimal shelf formation), and finally by footprint area. Heavy and tall items are placed on the floor first to keep the center of gravity low and maximize vertical space utilization. This sequence ensures the highest possible volume efficiency and load stability.',
+    deleteConfirmTitle: 'Really delete this project?',
+    deleteConfirmYes: 'Yes, delete',
+    deleteConfirmNo: 'Cancel',
+    printBtnLabel: '🖨️ Print Load Plan',
+    printLoadingSeqTitle: 'Loading Sequence',
+    printContainerInfo: 'Container Info',
+    printProjectLabel: 'Project',
+    printEditorLabel: 'Editor',
+    printDateLabel: 'Date'
   }
 };

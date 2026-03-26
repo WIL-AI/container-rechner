@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { CONTAINERS } from './lib/containers';
 import { calculateHeterogeneousPacking } from './lib/packer';
-import type { PacklistItem, PackagingType, PackedItemInfo } from './lib/packer';
+import type { PacklistItem, PackagingType, PackedItemInfo, PackedContainer } from './lib/packer';
 import { getProjects, saveProject, deleteProject } from './lib/db';
 import type { Project } from './lib/db';
 import { ContainerViews } from './components/ContainerViews';
@@ -28,6 +28,7 @@ export default function App() {
   const [projectEditor, setProjectEditor] = useState<string>('');
   const [containerSelection, setContainerSelection] = useState<string>('auto');
   const [packlist, setPacklist] = useState<PacklistItem[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [savedProjects, setSavedProjects] = useState<Project[]>([]);
@@ -67,9 +68,15 @@ export default function App() {
   };
 
   const handleDeleteProject = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); 
-    await deleteProject(id); 
-    setSavedProjects(prev => prev.filter(p => p.id !== id));
+    e.stopPropagation();
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDeleteProject = async () => {
+    if (!deleteConfirmId) return;
+    await deleteProject(deleteConfirmId);
+    setSavedProjects(prev => prev.filter(p => p.id !== deleteConfirmId));
+    setDeleteConfirmId(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -97,6 +104,96 @@ export default function App() {
   const cancelEdit = () => {
     setEditingItemId(null);
     setForm({ ...DEFAULT_FORM, color: form.color });
+  };
+
+  const handlePrint = (pc: PackedContainer) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const loc = lang === 'de' ? 'de-DE' : 'en-US';
+    const dateStr = new Date().toLocaleString(loc);
+    
+    const itemsHtml = pc.items.map((it: PackedItemInfo) => `
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;">#${it.loadingOrder}</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.item.contentDesc || it.item.packaging}</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.l} x ${it.w} x ${it.h} mm</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.item.weight} kg</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">x:${it.x}, y:${it.y}, z:${it.z} mm</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${t.appTitle} - ${projectName || 'Report'}</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; color: #333; }
+            h1 { color: #1a2744; margin-bottom: 5px; }
+            .header-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .stats { display: flex; gap: 30px; margin-bottom: 30px; background: #f8fafc; padding: 15px; borderRadius: 8px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background: #f1f5f9; text-align: left; border: 1px solid #ddd; padding: 10px; }
+            .badge { background: #3b82f6; color: white; padding: 2px 6px; borderRadius: 4px; fontSize: 0.8em; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h1>${t.appTitle}</h1>
+              <p style="margin: 0; color: #666;">${t.appSubtitle}</p>
+            </div>
+            <div style="text-align: right;">
+              <p><strong>${t.printDateLabel}:</strong> ${dateStr}</p>
+            </div>
+          </div>
+
+          <div class="header-info" style="margin-top: 20px;">
+            <div>
+              <p><strong>${t.printProjectLabel}:</strong> ${projectName || '-'}</p>
+              <p><strong>${t.printEditorLabel}:</strong> ${projectEditor || '-'}</p>
+            </div>
+            <div>
+              <p><strong>${t.printContainerInfo}:</strong> ${pc.container.name} (${pc.container.length}x${pc.container.width}x${pc.container.height} mm)</p>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div><strong>${t.volumeLabel}:</strong> ${pc.utilizationVolumePercent.toFixed(1)}%</div>
+            <div><strong>${t.weightLabel2}:</strong> ${pc.utilizationWeightPercent.toFixed(1)}%</div>
+            <div><strong>${t.loadedItemsLabel}:</strong> ${pc.items.length}</div>
+          </div>
+
+          <h2>${t.printLoadingSeqTitle}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>${t.contentDescLabel}</th>
+                <th>Maße (LxBxH)</th>
+                <th>${t.weightLabel}</th>
+                <th>Position (mm)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 40px; font-size: 0.9em; color: #666; font-style: italic;">
+            ${t.efficiencyExplanation}
+          </div>
+
+          <p class="no-print" style="margin-top: 40px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+              Drucken / Print
+            </button>
+          </p>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const removePacklistItem = (id: string, e?: React.MouseEvent) => {
@@ -136,8 +233,8 @@ export default function App() {
       {/* Header */}
       <div className="header-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', padding: '0 1rem' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', marginBottom: '4px' }}>{t.appTitle} <span style={{fontSize: '0.35em', verticalAlign: 'middle', background: 'var(--accent)', color: 'white', padding: '4px 8px', borderRadius: '4px'}}>PRO</span></h1>
-          <p className="subtitle" style={{ margin: 0, fontSize: '1rem' }}>{t.appSubtitle}</p>
+          <h1 style={{ fontSize: '2.8rem', fontWeight: 800, marginBottom: '4px', letterSpacing: '-1px' }}>{t.appTitle}</h1>
+          <p className="subtitle" style={{ margin: 0, fontSize: '1.1rem', opacity: 0.8 }}>{t.appSubtitle}</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button type="button" onClick={() => setShowProjectsModal(true)} className="btn" style={{ background: 'rgba(255,255,255,0.1)', width: 'auto', padding: '0.875rem 1rem' }}>
@@ -158,7 +255,7 @@ export default function App() {
           {/* Step 1: Project Information */}
           <div className="glass-panel animate-in" style={{ padding: '1.5rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>{t.projectInfoTitle}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{t.projectPlaceholder.replace('...', '')}</label>
                 <input
@@ -167,7 +264,7 @@ export default function App() {
                   value={projectName}
                   onChange={e => setProjectName(e.target.value)}
                   className="input-field"
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', fontWeight: 'bold' }}
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', fontWeight: 'bold', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
@@ -178,7 +275,7 @@ export default function App() {
                   value={projectEditor}
                   onChange={e => setProjectEditor(e.target.value)}
                   className="input-field"
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)' }}
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -405,11 +502,21 @@ export default function App() {
                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                   {result && result.packedContainers.length > 0 ? (
                     <>
-                      {result.packedContainers.map((pc, idx) => (
-                        <div key={idx} style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                          <h3 style={{ margin: '0 0 1rem 0', color: 'var(--accent)', fontSize: '1.3rem' }}>
-                            {idx + 1}. {pc.container.name}
-                          </h3>
+                      {result.packedContainers.map((pc: PackedContainer, idx: number) => (
+                        <div key={`${pc.container.id}-${idx}`} style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ margin: 0, color: 'var(--accent)', fontSize: '1.3rem' }}>
+                              {idx + 1}. {pc.container.name}
+                            </h3>
+                            <button 
+                              type="button" 
+                              onClick={() => handlePrint(pc)} 
+                              className="btn" 
+                              style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)' }}
+                            >
+                              {t.printBtnLabel}
+                            </button>
+                          </div>
                           
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                             <div>
@@ -519,7 +626,7 @@ export default function App() {
           <div className="glass-panel" style={{ width: '90%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <h2 style={{ margin: 0 }}>{t.modalTitle}</h2>
-              <button onClick={() => setShowProjectsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+              <button onClick={() => { setShowProjectsModal(false); setDeleteConfirmId(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
             </div>
             
             <button onClick={createNewProject} className="btn" style={{ marginBottom: '2rem', width: '100%' }}>
@@ -533,17 +640,29 @@ export default function App() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {savedProjects.sort((a,b) => b.updatedAt - a.updatedAt).map(p => (
-                  <div key={p.id} onClick={() => loadProject(p)} style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.2s ease' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
-                    <div>
-                      <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--accent)', marginBottom: '4px' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        {t.lastEdited} {new Date(p.updatedAt).toLocaleString(lang === 'de' ? 'de-DE' : 'en-US')} <br/>
-                        {p.packlist.length} {t.packlistCountText}
+                  <div key={p.id} style={{ position: 'relative' }}>
+                    <div onClick={() => loadProject(p)} style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.2s ease' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--accent)', marginBottom: '4px' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          {t.lastEdited} {new Date(p.updatedAt).toLocaleString(lang === 'de' ? 'de-DE' : 'en-US')} <br/>
+                          {p.packlist.length} {t.packlistCountText}
+                        </div>
+                      </div>
+                      <button onClick={(e) => handleDeleteProject(e, p.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.5rem', borderRadius: '50%' }} title={t.btnDelete}>
+                        🗑️
+                      </button>
+                    </div>
+                    {/* Delete confirmation popup */}
+                    {deleteConfirmId === p.id && (
+                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#1e293b', border: '2px solid var(--danger)', borderRadius: '12px', padding: '1.25rem 1.5rem', zIndex: 10, textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '250px' }}>
+                      <div style={{ marginBottom: '1rem', fontWeight: 'bold', fontSize: '1rem' }}>{t.deleteConfirmTitle}</div>
+                      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                        <button onClick={(e) => { e.stopPropagation(); confirmDeleteProject(); }} className="btn" style={{ background: 'var(--danger)', padding: '0.5rem 1.25rem', width: 'auto' }}>{t.deleteConfirmYes}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="btn" style={{ background: 'rgba(255,255,255,0.1)', padding: '0.5rem 1.25rem', width: 'auto' }}>{t.deleteConfirmNo}</button>
                       </div>
                     </div>
-                    <button onClick={(e) => handleDeleteProject(e, p.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.5rem', borderRadius: '50%' }} title={t.btnDelete}>
-                      🗑️
-                    </button>
+                    )}
                   </div>
                 ))}
               </div>
