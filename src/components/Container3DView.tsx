@@ -221,26 +221,26 @@ export const Container3DView = memo(({ container, items, lang, activeItemId, onI
                 onClick={() => onItemClick(item.item.id)} 
               />
             ))}
-            <OrbitControls target={target} makeDefault enableDamping={false} minDistance={1} maxDistance={100} />
+            <OrbitControls ref={controlsRef} target={target} makeDefault enableDamping={false} minDistance={1} maxDistance={100} />
           </Suspense>
         </Canvas>
       </div>
 
-      <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{t.stepControlLabel}</span>
+      <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{t.stepControlLabel}</span>
         <input type="range" min={0} max={maxStep} value={visibleStep}
           onChange={e => { stopPlay(); setVisibleStep(Number(e.target.value)); }}
           style={{ flex: 1, accentColor: 'var(--accent)' }} />
         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', minWidth: '50px', textAlign: 'center' }}>
           {visibleStep}/{maxStep}
         </span>
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
+        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
           {!isPlaying ? (
-            <button type="button" onClick={startPlay} style={{ ...presetBtnStyle, background: 'var(--accent)' }}>▶ {t.stepPlay}</button>
+            <button type="button" onClick={startPlay} style={{ ...presetBtnStyle, background: 'var(--accent)', padding: '0.3rem 0.5rem' }}>▶ {t.stepPlay}</button>
           ) : (
-            <button type="button" onClick={stopPlay} style={{ ...presetBtnStyle, background: 'var(--danger)' }}>⏸ {t.stepPause}</button>
+            <button type="button" onClick={stopPlay} style={{ ...presetBtnStyle, background: 'var(--danger)', padding: '0.3rem 0.5rem' }}>⏸ {t.stepPause}</button>
           )}
-          <button type="button" onClick={() => { stopPlay(); setVisibleStep(maxStep); }} style={presetBtnStyle}>{t.stepAll}</button>
+          <button type="button" onClick={() => { stopPlay(); setVisibleStep(maxStep); }} style={{ ...presetBtnStyle, padding: '0.3rem 0.5rem' }}>{t.stepAll}</button>
         </div>
       </div>
     </div>

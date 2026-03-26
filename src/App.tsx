@@ -260,7 +260,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="app-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      <div className="app-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
         {/* Left Column: Form Workflow */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
@@ -428,7 +428,7 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* Active Container Info */}
-          <div className="glass-panel animate-in" style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)' }}>
+          <div className="glass-panel animate-in" style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', flexWrap: 'wrap', gap: '1rem' }}>
              <div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 'bold', marginBottom: '4px' }}>
                   {lang === 'de' ? 'Aktueller Lade-Modus:' : 'Current Load Mode:'}
