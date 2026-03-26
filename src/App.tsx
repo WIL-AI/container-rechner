@@ -119,7 +119,7 @@ export default function App() {
         <td style="border: 1px solid #ddd; padding: 8px;">${it.item.contentDesc || it.item.packaging}</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${it.l} x ${it.w} x ${it.h} mm</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${it.item.weight} kg</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">x:${it.x}, y:${it.y}, z:${it.z} mm</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${formatPosition(it.x, it.y, it.z, pc.container.width)}</td>
       </tr>
     `).join('');
 
@@ -213,16 +213,24 @@ export default function App() {
     return calculateHeterogeneousPacking(packlist, containerSelection);
   }, [packlist, containerSelection]);
 
+  const formatPosition = (x: number, y: number, z: number, cW: number) => {
+    const row = Math.floor(z / 1000) + 1;
+    const side = x < cW / 3 ? t.posLeft : x < (cW * 2) / 3 ? t.posMiddle : t.posRight;
+    const level = y === 0 ? t.posFloor : `${t.posLevel} ${Math.floor(y/1000) + 2}`;
+    return `${level}, ${t.posRow} ${row}, ${side}`;
+  };
+
   const groupItems = (items: PackedItemInfo[]) => {
-    const map = new Map<string, { item: PacklistItem, count: number, orderMin: number, orderMax: number }>();
+    const map = new Map<string, { item: PacklistItem, count: number, orderMin: number, orderMax: number, posDesc: string }>();
     items.forEach(i => {
       const existing = map.get(i.item.id);
+      const posDesc = formatPosition(i.x, i.y, i.z, i.item.width); // This is approximate for the group
       if(existing) {
         existing.count += 1;
         existing.orderMin = Math.min(existing.orderMin, i.loadingOrder);
         existing.orderMax = Math.max(existing.orderMax, i.loadingOrder);
       } else {
-        map.set(i.item.id, { item: i.item, count: 1, orderMin: i.loadingOrder, orderMax: i.loadingOrder });
+        map.set(i.item.id, { item: i.item, count: 1, orderMin: i.loadingOrder, orderMax: i.loadingOrder, posDesc });
       }
     });
     return Array.from(map.values());
@@ -573,8 +581,8 @@ export default function App() {
                                    <span style={{ color: 'var(--accent)', fontSize: '0.75rem', fontWeight: 'bold', marginRight: '8px', background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
                                      #{pi.orderMin === pi.orderMax ? pi.orderMin : `${pi.orderMin}-${pi.orderMax}`}
                                    </span>
-                                   <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                                     ({pi.item.length}x{pi.item.width}x{pi.item.height})
+                                   <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', flex: 1, textAlign: 'right' }}>
+                                     {pi.posDesc}
                                    </span>
                                  </li>
                               ))}

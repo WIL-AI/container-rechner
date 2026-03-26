@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Text, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { PackedItemInfo } from '../lib/packer';
@@ -33,24 +33,19 @@ function ContainerWireframe({ container }: { container: ContainerType }) {
       {edges.map((pts, i) => (
         <Line key={i} points={pts} color="#4a90d9" lineWidth={1.5} opacity={0.6} transparent />
       ))}
-      {/* Floor */}
       <mesh position={[cW/2, 0.001, cL/2]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[cW, cL]} />
         <meshStandardMaterial color="#1a2744" transparent opacity={0.5} side={THREE.DoubleSide} />
       </mesh>
-      {/* Door/front label (z=0) */}
       <Text position={[cW/2, -0.18, 0]} fontSize={0.18} color="#ef4444" anchorX="center" anchorY="top" fontWeight="bold">
         ← TÜR / DOOR →
       </Text>
-      {/* Back wall label (z=cL) */}
       <Text position={[cW/2, -0.18, cL]} fontSize={0.14} color="#4a90d9" anchorX="center" anchorY="top">
         STIRNWAND / BACK
       </Text>
-      {/* Left wall label */}
       <Text position={[-0.15, cH/2, cL/2]} fontSize={0.12} color="#6b7280" anchorX="center" anchorY="middle" rotation={[0, Math.PI / 2, 0]}>
         LINKS / LEFT
       </Text>
-      {/* Right wall label */}
       <Text position={[cW + 0.15, cH/2, cL/2]} fontSize={0.12} color="#6b7280" anchorX="center" anchorY="middle" rotation={[0, -Math.PI / 2, 0]}>
         RECHTS / RIGHT
       </Text>
@@ -103,13 +98,6 @@ function PackedBox({ item, isActive, dimmed, onClick, showLabel }: {
   );
 }
 
-// Helper to ensure rendering happens when needed
-function Invalidate({ deps }: { deps: unknown[] }) {
-  const { invalidate } = useThree();
-  useEffect(() => { invalidate(); }, [...deps, invalidate]); // eslint-disable-line react-hooks/exhaustive-deps
-  return null;
-}
-
 export function Container3DView({ container, items, lang, activeItemId, onItemClick }: Props) {
   const t = translations[lang];
   const [visibleStep, setVisibleStep] = useState<number>(items.length);
@@ -122,7 +110,7 @@ export function Container3DView({ container, items, lang, activeItemId, onItemCl
     (container.width * S) / 2,
     (container.height * S) / 2,
     (container.length * S) / 2
-  ), [container]);
+  ), [container.width, container.height, container.length]);
 
   const startPlay = useCallback(() => {
     setVisibleStep(0);
@@ -196,25 +184,24 @@ export function Container3DView({ container, items, lang, activeItemId, onItemCl
         background: 'linear-gradient(180deg, #0a0f1e 0%, #141e33 100%)',
         cursor: 'grab'
       }}>
-        <Canvas key={`${container.id}-${items.length}`} camera={{ position: [8, 6, -4], fov: 35 }} gl={{ antialias: true }}>
+        {/* STABLE KEY: ONLY ON CONTAINER ID, SO IT DOES NOT RE-MOUNT WHEN ITEMS CHANGE */}
+        <Canvas key={container.id} camera={{ position: [8, 6, -4], fov: 35 }} gl={{ antialias: true }}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, -5]} intensity={0.8} />
           <directionalLight position={[-5, 8, 10]} intensity={0.4} />
           <ContainerWireframe container={container} />
-          {visibleItems.map((item, idx) => (
-            <PackedBox key={`${item.item.id}-${idx}`} item={item}
+          {visibleItems.map((item) => (
+            <PackedBox key={`${item.item.id}-${item.loadingOrder}`} item={item}
               isActive={activeItemId === item.item.id}
               dimmed={activeItemId !== null && activeItemId !== item.item.id}
               onClick={() => onItemClick(item.item.id)} showLabel={true} />
           ))}
-          <Invalidate deps={[visibleItems.length, activeItemId, container]} />
           <OrbitControls ref={controlsRef} target={target}
             enableDamping={false} minDistance={2} maxDistance={20}
           />
         </Canvas>
       </div>
 
-      {/* Step-by-step controls */}
       <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{t.stepControlLabel}</span>
         <input type="range" min={0} max={maxStep} value={visibleStep}
