@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Text, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { PackedItemInfo } from '../lib/packer';
@@ -98,6 +98,22 @@ function PackedBox({ item, isActive, dimmed, onClick, showLabel }: {
   );
 }
 
+// Stable camera initializer to prevent resets
+function SceneInit({ target }: { target: THREE.Vector3 }) {
+  const { camera } = useThree();
+  const initRef = useRef(false);
+  
+  useEffect(() => {
+    if (!initRef.current) {
+      camera.position.set(8, 6, -4);
+      camera.lookAt(target);
+      initRef.current = true;
+    }
+  }, [camera, target]);
+  
+  return null;
+}
+
 export function Container3DView({ container, items, lang, activeItemId, onItemClick }: Props) {
   const t = translations[lang];
   const [visibleStep, setVisibleStep] = useState<number>(items.length);
@@ -184,8 +200,9 @@ export function Container3DView({ container, items, lang, activeItemId, onItemCl
         background: 'linear-gradient(180deg, #0a0f1e 0%, #141e33 100%)',
         cursor: 'grab'
       }}>
-        {/* STABLE KEY: ONLY ON CONTAINER ID, SO IT DOES NOT RE-MOUNT WHEN ITEMS CHANGE */}
-        <Canvas key={container.id} camera={{ position: [8, 6, -4], fov: 35 }} gl={{ antialias: true }}>
+        {/* HARD STABLE KEY: Never re-mounts the Canvas, which stops camera resets */}
+        <Canvas key="stable-3d-viewer" camera={{ position: [8, 6, -4], fov: 35 }} gl={{ antialias: true }}>
+          <SceneInit target={target} />
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, -5]} intensity={0.8} />
           <directionalLight position={[-5, 8, 10]} intensity={0.4} />

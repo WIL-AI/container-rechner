@@ -107,6 +107,8 @@ export const translations = {
     posLeft: 'links',
     posMiddle: 'mitte',
     posRight: 'rechts',
+    posFront: 'vorne (Tür)',
+    posBack: 'hinten (Stirnwand)',
     posFromDoor: 'von der Tür',
     posFromFloor: 'von unten',
     posFromLeft: 'von links'
@@ -216,6 +218,8 @@ export const translations = {
     posLeft: 'left',
     posMiddle: 'middle',
     posRight: 'right',
+    posFront: 'front (door)',
+    posBack: 'back (rear)',
     posFromDoor: 'from door',
     posFromFloor: 'from floor',
     posFromLeft: 'from left'

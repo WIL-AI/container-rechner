@@ -119,7 +119,7 @@ export default function App() {
         <td style="border: 1px solid #ddd; padding: 8px;">${it.item.contentDesc || it.item.packaging}</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${it.l} x ${it.w} x ${it.h} mm</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${it.item.weight} kg</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${formatPosition(it.x, it.y, it.z, pc.container.width)}</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${formatPosition(it.x, it.y, it.z, pc.container.width, pc.container.length)}</td>
       </tr>
     `).join('');
 
@@ -213,18 +213,18 @@ export default function App() {
     return calculateHeterogeneousPacking(packlist, containerSelection);
   }, [packlist, containerSelection]);
 
-  const formatPosition = (x: number, y: number, z: number, cW: number) => {
-    const row = Math.floor(z / 1000) + 1;
+  const formatPosition = (x: number, y: number, z: number, cW: number, cL: number) => {
+    const area = z < cL / 3 ? t.posFront : z < (cL * 2) / 3 ? t.posMiddle : t.posBack;
     const side = x < cW / 3 ? t.posLeft : x < (cW * 2) / 3 ? t.posMiddle : t.posRight;
-    const level = y === 0 ? t.posFloor : `${t.posLevel} ${Math.floor(y/1000) + 2}`;
-    return `${level}, ${t.posRow} ${row}, ${side}`;
+    const level = y < 100 ? t.posFloor : `${t.posLevel} ${Math.floor(y/800) + 2}`;
+    return `${area}, ${side}, ${level}`;
   };
 
-  const groupItems = (items: PackedItemInfo[]) => {
+  const groupItems = (items: PackedItemInfo[], cW: number, cL: number) => {
     const map = new Map<string, { item: PacklistItem, count: number, orderMin: number, orderMax: number, posDesc: string }>();
     items.forEach(i => {
       const existing = map.get(i.item.id);
-      const posDesc = formatPosition(i.x, i.y, i.z, i.item.width); // This is approximate for the group
+      const posDesc = formatPosition(i.x, i.y, i.z, cW, cL); 
       if(existing) {
         existing.count += 1;
         existing.orderMin = Math.min(existing.orderMin, i.loadingOrder);
@@ -572,7 +572,7 @@ export default function App() {
                           <div>
                             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem' }}>{t.loadedItemsLabel}</div>
                             <ul style={{ margin: '0.5rem 0 0 0', paddingLeft: '0', fontSize: '0.9rem', listStyle: 'none' }}>
-                              {groupItems(pc.items).map((pi, iIdx) => (
+                              {groupItems(pc.items, pc.container.width, pc.container.length).map((pi, iIdx) => (
                                  <li key={iIdx} style={{ marginBottom: '8px', display: 'flex', alignItems: 'center' }}>
                                    <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '2px', background: pi.item.color || '#ccc', marginRight: '12px', border: '1px solid rgba(255,255,255,0.2)' }}></span>
                                    <span style={{ flex: 1 }}>
