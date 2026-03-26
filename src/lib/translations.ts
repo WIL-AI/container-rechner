@@ -6,14 +6,17 @@ export const translations = {
     appSubtitle: '3D-Ladeplanung',
     projectPlaceholder: 'Projektname eingeben...',
     loadProjectsBtn: 'Projekte laden...',
+    projectInfoTitle: '1. Projektinformationen',
+    projectEditorLabel: 'Projektbearbeiter',
+    projectEditorPlaceholder: 'Name des Bearbeiters...',
     
-    step1Title: '1. Container-Auswahl',
+    step1Title: '2. Container-Auswahl',
     step1Desc: 'Wähle Auto-Mix oder einen spezifischen Container aus der Liste.',
     autoMixTitle: 'Logistik-KI (Auto-Mix)',
     autoMixDesc: 'Wählt automatisch den idealen Container oder die beste Containerkombination aus.',
     manualContainerLabel: 'Oder spezifischen Container wählen:',
     
-    step2Title: '2. Packstücke erfassen',
+    step2Title: '3. Packstücke erfassen',
     contentDescLabel: 'Inhalt / Bezeichnung',
     contentDescPlaceholder: 'z.B. Maschinenteile',
     quantityLabel: 'Anzahl',
@@ -51,6 +54,9 @@ export const translations = {
     loadPlanEmpty: 'Bereit zur automatischen Kalkulation.',
     volumeLabel: 'Volumen',
     weightLabel2: 'Gewicht',
+    freeVolumeLabel: 'Freies Volumen',
+    freeAreaLabel: 'Freie Grundfläche',
+    freePayloadLabel: 'Freie Nutzlast',
     loadedItemsLabel: 'Verladene Stückgüter:',
     unloadableTitle: '⚠️ Nicht verladbar',
     reasonPrefix: 'Grund:',
@@ -87,21 +93,25 @@ export const translations = {
     view3DPresetIso: 'Isometrisch',
     view3DPresetTop: 'Oben',
     view3DPresetSide: 'Seite',
-    view3DPresetFront: 'Front'
+    view3DPresetFront: 'Front',
+    efficiencyExplanation: '💡 Ladelogik: Die Packstücke werden nach Priorität, dann nach Höhe (für optimale Regalbildung) und zuletzt nach Grundfläche sortiert. Schwere und hohe Stücke kommen zuerst auf den Boden, um den Schwerpunkt niedrig zu halten und die Raumhöhe maximal auszunutzen. Diese Reihenfolge gewährleistet die höchstmögliche Volumeneffizienz und Ladungsstabilität.'
   },
   en: {
     appTitle: 'Container Calculator',
     appSubtitle: '3D Load Planning',
     projectPlaceholder: 'Enter project name...',
     loadProjectsBtn: 'Load Projects...',
+    projectInfoTitle: '1. Project Information',
+    projectEditorLabel: 'Project Editor',
+    projectEditorPlaceholder: 'Editor name...',
     
-    step1Title: '1. Container Selection',
+    step1Title: '2. Container Selection',
     step1Desc: 'Choose Auto-Mix or select a specific container from the list.',
     autoMixTitle: 'Logistics AI (Auto-Mix)',
     autoMixDesc: 'Automatically selects the ideal container set',
     manualContainerLabel: 'Or select specific container:',
     
-    step2Title: '2. Capture Pack Items',
+    step2Title: '3. Capture Pack Items',
     contentDescLabel: 'Content / Description',
     contentDescPlaceholder: 'e.g. Machine parts',
     quantityLabel: 'Quantity',
@@ -139,6 +149,9 @@ export const translations = {
     loadPlanEmpty: 'Ready for automatic calculation.',
     volumeLabel: 'Volume',
     weightLabel2: 'Weight',
+    freeVolumeLabel: 'Free Volume',
+    freeAreaLabel: 'Free Floor Area',
+    freePayloadLabel: 'Free Payload',
     loadedItemsLabel: 'Loaded items:',
     unloadableTitle: '⚠️ Unloadable',
     reasonPrefix: 'Reason:',
@@ -174,6 +187,7 @@ export const translations = {
     view3DPresetIso: 'Isometric',
     view3DPresetTop: 'Top',
     view3DPresetSide: 'Side',
-    view3DPresetFront: 'Front'
+    view3DPresetFront: 'Front',
+    efficiencyExplanation: '💡 Loading Logic: Items are sorted by priority, then height (for optimal shelf formation), and finally by footprint area. Heavy and tall items are placed on the floor first to keep the center of gravity low and maximize vertical space utilization. This sequence ensures the highest possible volume efficiency and load stability.'
   }
 };

@@ -25,6 +25,7 @@ export default function App() {
 
   const [projectId, setProjectId] = useState<string>(`proj-${Date.now()}`);
   const [projectName, setProjectName] = useState<string>('');
+  const [projectEditor, setProjectEditor] = useState<string>('');
   const [containerSelection, setContainerSelection] = useState<string>('auto');
   const [packlist, setPacklist] = useState<PacklistItem[]>([]);
   
@@ -139,14 +140,6 @@ export default function App() {
           <p className="subtitle" style={{ margin: 0, fontSize: '1rem' }}>{t.appSubtitle}</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <input 
-            type="text" 
-            placeholder={t.projectPlaceholder}
-            value={projectName}
-            onChange={e => setProjectName(e.target.value)}
-            className="input-field" 
-            style={{ width: '350px', background: 'rgba(0,0,0,0.3)', fontWeight: 'bold' }}
-          />
           <button type="button" onClick={() => setShowProjectsModal(true)} className="btn" style={{ background: 'rgba(255,255,255,0.1)', width: 'auto', padding: '0.875rem 1rem' }}>
             {t.loadProjectsBtn}
           </button>
@@ -162,7 +155,36 @@ export default function App() {
         {/* Left Column: Form Workflow */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Step 1: Container Selection */}
+          {/* Step 1: Project Information */}
+          <div className="glass-panel animate-in" style={{ padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>{t.projectInfoTitle}</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{t.projectPlaceholder.replace('...', '')}</label>
+                <input
+                  type="text"
+                  placeholder={t.projectPlaceholder}
+                  value={projectName}
+                  onChange={e => setProjectName(e.target.value)}
+                  className="input-field"
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', fontWeight: 'bold' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{t.projectEditorLabel}</label>
+                <input
+                  type="text"
+                  placeholder={t.projectEditorPlaceholder}
+                  value={projectEditor}
+                  onChange={e => setProjectEditor(e.target.value)}
+                  className="input-field"
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2: Container Selection */}
           <div className="glass-panel animate-in" style={{ padding: '1.5rem' }}>
              <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{t.step1Title}</h2>
              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{t.step1Desc}</p>
@@ -406,6 +428,32 @@ export default function App() {
                             </div>
                           </div>
 
+                          {/* Remaining capacity */}
+                          {(() => {
+                            const cVol = pc.container.length * pc.container.width * pc.container.height;
+                            const cArea = pc.container.length * pc.container.width;
+                            const freeVol = (cVol - pc.totalVolume) / 1e9;
+                            const freeArea = (cArea - pc.items.reduce((acc, it) => { const footprint = it.l * it.w; return acc + footprint; }, 0)) / 1e6;
+                            const freeWeight = pc.container.maxPayload - pc.totalWeight;
+                            const loc = lang === 'de' ? 'de-DE' : 'en-US';
+                            return (
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '8px', padding: '0.6rem 0.8rem' }}>
+                                  <div style={{ fontSize: '0.7rem', color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{t.freeVolumeLabel}</div>
+                                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#10b981' }}>{freeVol.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} m³</div>
+                                </div>
+                                <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', padding: '0.6rem 0.8rem' }}>
+                                  <div style={{ fontSize: '0.7rem', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{t.freeAreaLabel}</div>
+                                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#3b82f6' }}>{Math.max(0, freeArea).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} m²</div>
+                                </div>
+                                <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px', padding: '0.6rem 0.8rem' }}>
+                                  <div style={{ fontSize: '0.7rem', color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{t.freePayloadLabel}</div>
+                                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#f59e0b' }}>{freeWeight.toLocaleString(loc)} kg</div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           <div>
                             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem' }}>{t.loadedItemsLabel}</div>
                             <ul style={{ margin: '0.5rem 0 0 0', paddingLeft: '0', fontSize: '0.9rem', listStyle: 'none' }}>
@@ -429,6 +477,11 @@ export default function App() {
                           <Container3DView container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={(id) => setActiveItemId(prev => prev === id ? null : id)} />
 
                           <ContainerViews container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={(id) => setActiveItemId(prev => prev === id ? null : id)} />
+
+                          {/* Efficiency explanation */}
+                          <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                            {t.efficiencyExplanation}
+                          </div>
 
                         </div>
                       ))}
