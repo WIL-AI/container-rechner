@@ -147,7 +147,8 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
    let currentZ = 0;
    let currentX = 0;
    let currentY = 0;
-   let layerMaxZ = 0;
+   let sliceMaxL = 0;   // Max length (Z) of items in the current slice
+   let columnMaxW = 0;  // Max width (X) of items in the current column stacking upwards
 
    for (const item of itemsToPack) {
        if (usedWeight + item.weight > container.maxPayload) {
@@ -170,28 +171,31 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
            continue;
        }
 
-       // --- PACKING LOGIC: Cross-Section Layering ---
+       // --- OVERLAP-SAFE PACKING LOGIC ---
        
-       // 1. Try to stack in Y at current X/Z
+       // 1. If we can't fit vertically at current X/Z, move to the NEXT X-Column
        if (currentY + h > container.height) {
           currentY = 0;
-          currentX += w; // Try next column in the same Z-slice
+          currentX += columnMaxW; // Move X by the WIDEST item in the column we just finished
+          columnMaxW = 0;
        }
 
-       // 2. Try to move to next X column in the same Slice
+       // 2. If we can't fit horizontally in the current Z-Slice, move to the NEXT Z-Slice
        if (currentX + w > container.width) {
           currentX = 0;
           currentY = 0;
-          currentZ += layerMaxZ; // Advance Z by the depth of the previous section
-          layerMaxZ = 0;
+          currentZ += sliceMaxL; // Move Z by the LONGEST item in the slice we just finished
+          sliceMaxL = 0;
+          columnMaxW = 0;
        }
 
-       // 3. Check if Z is out of bounds
+       // 3. Check if we are totally out of space in the container
        if (currentZ + l > container.length || currentX + w > container.width || currentY + h > container.height) {
            remainingItems.push(item);
            continue;
        }
 
+       // --- COMMIT PACKING ---
        loadingCounter++;
        packedItems.push({
            item,
@@ -205,11 +209,11 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
        usedVolume += (w * h * l);
        usedWeight += item.weight;
 
-       // Track the deepest item in the current "slice" to know how far to advance Z
-       if (l > layerMaxZ) layerMaxZ = l;
+       // Update tracking for advancements
+       if (l > sliceMaxL) sliceMaxL = l;
+       if (w > columnMaxW) columnMaxW = w;
        
-       // For now, simple stacking: Increment Y for next item at this X/Z if it fits
-       // actually, many items have same bottom footprint, so we can stack them
+       // Stack upwards in the same X/Z position
        currentY += h;
    }
 
