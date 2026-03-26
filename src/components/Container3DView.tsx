@@ -37,11 +37,11 @@ function ContainerWireframe({ container }: { container: ContainerType }) {
         <planeGeometry args={[cW, cL]} />
         <meshStandardMaterial color="#1a2744" transparent opacity={0.5} side={THREE.DoubleSide} />
       </mesh>
-      <Text position={[cW/2, -0.18, 0]} fontSize={0.18} color="#ef4444" anchorX="center" anchorY="top" fontWeight="bold">
-        ← TÜR / DOOR →
+      <Text position={[cW/2, -0.18, 0]} fontSize={0.18} color="#4a90d9" anchorX="center" anchorY="top" fontWeight="bold">
+        ← STIRNWAND / BACK →
       </Text>
-      <Text position={[cW/2, -0.18, cL]} fontSize={0.14} color="#4a90d9" anchorX="center" anchorY="top">
-        STIRNWAND / BACK
+      <Text position={[cW/2, -0.18, cL]} fontSize={0.14} color="#ef4444" anchorX="center" anchorY="top">
+        TÜR / DOOR
       </Text>
     </group>
   );

@@ -218,7 +218,7 @@ export default function App() {
   }, [packlist, containerSelection]);
 
   const formatPosition = (x: number, y: number, z: number, cW: number, cL: number) => {
-    const area = z < cL / 3 ? t.posFront : z < (cL * 2) / 3 ? t.posMiddle : t.posBack;
+    const area = z < cL / 3 ? t.posBack : z < (cL * 2) / 3 ? t.posMiddle : t.posFront;
     const side = x < cW / 3 ? t.posLeft : x < (cW * 2) / 3 ? t.posMiddle : t.posRight;
     const level = y < 100 ? t.posFloor : `${t.posLevel} ${Math.floor(y/800) + 2}`;
     return `${area}, ${side}, ${level}`;

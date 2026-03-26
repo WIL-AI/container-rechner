@@ -50,36 +50,67 @@ export interface PackingPlan {
   unpackedItems: { item: PacklistItem, missingCount: number, reason: string }[];
 }
 
-function findBestContainerForItems(items: PacklistItem[], containerSelection: string): ContainerType {
-  if (containerSelection !== 'auto') {
-    const specified = CONTAINERS.find(c => c.id === containerSelection);
-    if (specified) return specified;
-  }
+/**
+ * Simulates packing into a specific container and returns how much volume was used.
+ * This is used for dry-runs to pick the best container type in Auto-Mix mode.
+ */
+function dryRunPack(items: PacklistItem[], container: ContainerType): number {
+    const { usedVolume } = packIntoContainer3D(items, container);
+    return usedVolume;
+}
 
+function findBestContainerForItems(items: PacklistItem[], containerSelection: string): ContainerType {
   const needsCraning = items.some(i => i.needsCraning);
   const needsHC = items.some(i => i.height > 2390 || (!i.rotatable && i.width > 2390 && i.length > 2390));
 
+  // If container is manually selected, force it.
+  if (containerSelection !== 'auto') {
+    return CONTAINERS.find(c => c.id === containerSelection) || CONTAINERS[0];
+  }
+
+  // Pre-filter types based on technical requirements
+  let candidates = [...CONTAINERS];
   if (needsCraning) {
-     return CONTAINERS.find(c => c.id === '40ft-ot') || CONTAINERS.find(c => c.isOpenTop) || CONTAINERS[0];
+    candidates = candidates.filter(c => c.isOpenTop);
+  } else if (needsHC) {
+    candidates = candidates.filter(c => c.id.includes('hc'));
+  } else {
+    // Normal cases: avoid HC/OT if not needed unless it's the only way (not the case here)
+    candidates = candidates.filter(c => !c.isOpenTop && !c.id.includes('ot'));
   }
-  if (needsHC) {
-     return CONTAINERS.find(c => c.id === '40ft-hc') || CONTAINERS[0];
-  }
+
+  if (candidates.length === 0) candidates = [CONTAINERS[0]];
+
+  // If we have only one candidate after filters, use it.
+  if (candidates.length === 1) return candidates[0];
+
+  // Logic: Minimizing Container Count.
+  // We simulate packing for each candidate and choose the one that captures the MOST volume.
+  // This naturally favors the larger containers IF they are needed, OR the smaller ones if they fit everything perfectly.
   
-  let totalVol = 0;
-  let totalWeight = 0;
-  for (const item of items) {
-    totalVol += item.length * item.width * item.height * item.quantity;
-    totalWeight += item.weight * item.quantity;
+  let bestContainer = candidates[0];
+  let maxPackedVolume = -1;
+
+  for (const c of candidates) {
+    const vol = dryRunPack(items, c);
+    
+    // Preference logic:
+    // 1. If this container fits ALL items, and its total volume is smaller than the current best that also fits all items, pick it.
+    // 2. Otherwise, if it fits more volume than the current best, pick it.
+    if (vol > maxPackedVolume) {
+        maxPackedVolume = vol;
+        bestContainer = c;
+    } else if (vol === maxPackedVolume) {
+        // Tie-breaker: prefer the smaller container to save costs/space
+        const currentSize = bestContainer.length * bestContainer.width * bestContainer.height;
+        const candidateSize = c.length * c.width * c.height;
+        if (candidateSize < currentSize) {
+           bestContainer = c;
+        }
+    }
   }
 
-  const c20 = CONTAINERS.find(c => c.id === '20ft')!;
-  const c40 = CONTAINERS.find(c => c.id === '40ft')!;
-
-  if (totalVol <= c20.length * c20.width * c20.height * 0.85 && totalWeight <= c20.maxPayload) {
-     return c20;
-  }
-  return c40;
+  return bestContainer;
 }
 
 function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
@@ -89,7 +120,6 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
    const remainingItems: PacklistItem[] = [];
    let loadingCounter = 0;
    
-   // Expand distinct items to a sequence of individual items (1 per quantity)
    const itemsToPack: PacklistItem[] = [];
    for (const i of items) {
        for(let n=0; n < i.quantity; n++) {
@@ -97,14 +127,7 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
        }
    }
 
-   // Shelf packing state
-   let currentX = 0; // Width axis (door left -> right)
-   let currentY = 0; // Height axis (floor -> ceiling)
-   let currentZ = 0; // Length axis (doors -> front wall)
-   let rowMaxX = 0;  // Max width of items in current Z-row
-   let shelfMaxY = 0; // Max height of items on the current Y-shelf
-
-   // Sort: Priority -> Height (for shelf alignment) -> Volume
+   // Sort: Priority -> Height (Bottom items should be high) -> Volume
    itemsToPack.sort((a,b) => {
       const pWeight = { hoch: 3, normal: 2, niedrig: 1 };
       if (pWeight[a.priority] !== pWeight[b.priority]) {
@@ -113,6 +136,14 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
       if (b.height !== a.height) return b.height - a.height;
       return (b.length * b.width) - (a.length * a.width);
    });
+
+   // COORDINATE SYSTEM: 
+   // Z=0 is Back Wall (Stirnwand)
+   // Z increases towards the Door
+   let currentZ = 0;
+   let currentX = 0;
+   let currentY = 0;
+   let layerMaxZ = 0;
 
    for (const item of itemsToPack) {
        if (usedWeight + item.weight > container.maxPayload) {
@@ -124,9 +155,10 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
        let w = item.width;
        const h = item.height;
        
+       // Optimal rotation for fitting into the remaining depth
        if (item.rotatable && currentZ + l > container.length && currentZ + w <= container.length) {
-           l = item.width;
-           w = item.length;
+            l = item.width;
+            w = item.length;
        }
 
        if (item.needsCraning && !container.isOpenTop) {
@@ -134,24 +166,24 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
            continue;
        }
 
-       // Step 1: Does it fit in the current Z row?
-       if (currentZ + l > container.length) {
-           currentX += rowMaxX;
-           currentZ = 0;
-           rowMaxX = 0;
+       // --- PACKING LOGIC: Cross-Section Layering ---
+       
+       // 1. Try to stack in Y at current X/Z
+       if (currentY + h > container.height) {
+          currentY = 0;
+          currentX += w; // Try next column in the same Z-slice
        }
 
-       // Step 2: Does it fit on the current X row (Shelf depth)?
+       // 2. Try to move to next X column in the same Slice
        if (currentX + w > container.width) {
-           currentY += shelfMaxY;
-           currentX = 0;
-           currentZ = 0;
-           rowMaxX = 0;
-           shelfMaxY = 0;
+          currentX = 0;
+          currentY = 0;
+          currentZ += layerMaxZ; // Advance Z by the depth of the previous section
+          layerMaxZ = 0;
        }
 
-       // Step 3: Does it fit in the Container completely (Y)?
-       if (currentY + h > container.height || currentX + w > container.width || currentZ + l > container.length) {
+       // 3. Check if Z is out of bounds
+       if (currentZ + l > container.length || currentX + w > container.width || currentY + h > container.height) {
            remainingItems.push(item);
            continue;
        }
@@ -169,9 +201,12 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
        usedVolume += (w * h * l);
        usedWeight += item.weight;
 
-       currentZ += l;
-       if (w > rowMaxX) rowMaxX = w;
-       if (h > shelfMaxY) shelfMaxY = h;
+       // Track the deepest item in the current "slice" to know how far to advance Z
+       if (l > layerMaxZ) layerMaxZ = l;
+       
+       // For now, simple stacking: Increment Y for next item at this X/Z if it fits
+       // actually, many items have same bottom footprint, so we can stack them
+       currentY += h;
    }
 
    const remainingGrouped = new Map<string, PacklistItem>();
