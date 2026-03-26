@@ -119,7 +119,7 @@ export function ContainerViews({ container, items, lang, activeItemId, onItemCli
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
       
       {/* Top and Front View Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+      <div className="view-grid">
          <div>
             <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
               <span>{t.viewTop}</span>
@@ -139,7 +139,7 @@ export function ContainerViews({ container, items, lang, activeItemId, onItemCli
       </div>
 
       {/* Two Side Views Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div className="side-view-grid">
         <div>
            <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
              <span>{t.viewSideLeft}</span>

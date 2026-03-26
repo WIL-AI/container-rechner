@@ -243,12 +243,12 @@ export default function App() {
   return (
     <>
       {/* Header */}
-      <div className="header-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', padding: '0 1rem' }}>
-        <div>
-          <h1 style={{ fontSize: '2.8rem', fontWeight: 800, marginBottom: '4px', letterSpacing: '-1px' }}>{t.appTitle}</h1>
-          <p className="subtitle" style={{ margin: 0, fontSize: '1.1rem', opacity: 0.8 }}>{t.appSubtitle}</p>
+      <div className="header-section">
+        <div className="header-content">
+          <h1 className="app-title">{t.appTitle}</h1>
+          <p className="subtitle">{t.appSubtitle}</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="header-actions">
           <button type="button" onClick={() => setShowProjectsModal(true)} className="btn" style={{ background: 'rgba(255,255,255,0.1)', width: 'auto', padding: '0.875rem 1rem' }}>
             {t.loadProjectsBtn}
           </button>
@@ -260,7 +260,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="app-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
+      <div className="app-grid">
         {/* Left Column: Form Workflow */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
@@ -326,7 +326,7 @@ export default function App() {
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>{t.step2Title}</h2>
             
             {/* Compactly Grouped Form Fields */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-grid" style={{ marginBottom: '1rem' }}>
               <div className="input-group" style={{ gridColumn: 'span 2' }}>
                 <label className="input-label">{t.contentDescLabel}</label>
                 <input type="text" name="contentDesc" value={form.contentDesc || ''} onChange={handleInputChange} className="input-field" placeholder={t.contentDescPlaceholder} required />
