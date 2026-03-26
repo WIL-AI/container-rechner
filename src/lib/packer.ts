@@ -135,15 +135,19 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
        }
    }
 
-   // Sort: Priority -> Height (Bottom items should be high) -> Volume
-   itemsToPack.sort((a,b) => {
-      const pWeight = { hoch: 3, normal: 2, niedrig: 1 };
-      if (pWeight[a.priority] !== pWeight[b.priority]) {
-         return pWeight[b.priority] - pWeight[a.priority];
-      }
-      if (b.height !== a.height) return b.height - a.height;
-      return (b.length * b.width) - (a.length * a.width);
-   });
+    // Sort: Priority -> Footprint (group similar footprints for stacking) -> Height
+    itemsToPack.sort((a,b) => {
+       const pWeight = { hoch: 3, normal: 2, niedrig: 1 };
+       if (pWeight[a.priority] !== pWeight[b.priority]) {
+          return pWeight[b.priority] - pWeight[a.priority];
+       }
+       
+       const areaA = a.length * a.width;
+       const areaB = b.length * b.width;
+       if (areaB !== areaA) return areaB - areaA;
+
+       return b.height - a.height;
+    });
 
    // COORDINATE SYSTEM: 
    // Z=0 is Back Wall (Stirnwand)
@@ -160,65 +164,100 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
           continue;
        }
 
-       let l = item.length;
-       let w = item.width;
-       const h = item.height;
-       
-       // Optimal rotation for fitting into the remaining depth
-       if (item.rotatable && currentZ + l > container.length && currentZ + w <= container.length) {
-            l = item.width;
-            w = item.length;
-       }
+        // --- ROTATION & STACKING LOGIC ---
+        let l = item.length;
+        let w = item.width;
+        let h = item.height;
 
-       if (item.needsCraning && !container.isOpenTop) {
-           remainingItems.push(item);
-           continue;
-       }
+        // 1. Rotation Logic: If rotatable, choose the orientation that fits better
+        // We prefer keeping the larger dimension in Z (length) to fill slices deeper if needed,
+        // but if it doesn't fit in X, we MUST rotate. 
+        // More importantly: if rotating results in a smaller "slice-depth" impact, we do it.
+        if (item.rotatable) {
+           const fitsNormal = (currentX + w <= container.width) && (currentZ + l <= container.length);
+           const fitsRotated = (currentX + l <= container.width) && (currentZ + w <= container.length);
+           
+           if (fitsRotated && !fitsNormal) {
+              // Forced rotation to fit
+              [l, w] = [w, l];
+           } else if (fitsNormal && fitsRotated) {
+              // Optional rotation to save width in the current column or length in the slice
+              // Prefer orientation that fits in current columnMaxW if possible
+              if (w > columnMaxW && l <= columnMaxW && l < w) {
+                 [l, w] = [w, l];
+              }
+           }
+        }
 
-       // --- OVERLAP-SAFE PACKING LOGIC ---
-       
-       // 1. If we can't fit vertically at current X/Z, move to the NEXT X-Column
-       if (currentY + h > container.height) {
-          currentY = 0;
-          currentX += columnMaxW; // Move X by the WIDEST item in the column we just finished
-          columnMaxW = 0;
-       }
+        if (item.needsCraning && !container.isOpenTop) {
+            remainingItems.push(item);
+            continue;
+        }
 
-       // 2. If we can't fit horizontally in the current Z-Slice, move to the NEXT Z-Slice
-       if (currentX + w > container.width) {
-          currentX = 0;
-          currentY = 0;
-          currentZ += sliceMaxL; // Move Z by the LONGEST item in the slice we just finished
-          sliceMaxL = 0;
-          columnMaxW = 0;
-       }
+        // --- OVERLAP-SAFE PACKING & STACKING ---
+        
+        // A. If the current stack (currentY) is NOT zero, we are trying to stack on top of the PREVIOUS item.
+        // We can only do this if the PREVIOUS item allowed it AND the CURRENT item allows it.
+        const prevItem = packedItems.length > 0 ? packedItems[packedItems.length - 1] : null;
+        const canStackAbove = prevItem && prevItem.x === currentX && prevItem.z === currentZ && prevItem.item.stackableBottom;
+        const canStackHere = item.stackableTop;
 
-       // 3. Check if we are totally out of space in the container
-       if (currentZ + l > container.length || currentX + w > container.width || currentY + h > container.height) {
-           remainingItems.push(item);
-           continue;
-       }
+        if (currentY > 0 && (!canStackAbove || !canStackHere)) {
+            // Cannot stack here -> move to next X-column
+            currentY = 0;
+            currentX += columnMaxW;
+            columnMaxW = 0;
+        }
 
-       // --- COMMIT PACKING ---
-       loadingCounter++;
-       packedItems.push({
-           item,
-           x: currentX,
-           y: currentY,
-           z: currentZ,
-           w, h, l,
-           loadingOrder: loadingCounter
-       });
+        // B. Vertical Height check
+        if (currentY + h > container.height) {
+           currentY = 0;
+           currentX += columnMaxW;
+           columnMaxW = 0;
+        }
 
-       usedVolume += (w * h * l);
-       usedWeight += item.weight;
+        // C. Width check (move to next slice)
+        if (currentX + w > container.width) {
+           currentX = 0;
+           currentY = 0;
+           currentZ += sliceMaxL;
+           sliceMaxL = 0;
+           columnMaxW = 0;
+        }
 
-       // Update tracking for advancements
-       if (l > sliceMaxL) sliceMaxL = l;
-       if (w > columnMaxW) columnMaxW = w;
-       
-       // Stack upwards in the same X/Z position
-       currentY += h;
+        // D. Depth check (exit container)
+        if (currentZ + l > container.length) {
+            remainingItems.push(item);
+            continue;
+        }
+
+        // --- COMMIT PACKING ---
+        loadingCounter++;
+        packedItems.push({
+            item,
+            x: currentX,
+            y: currentY,
+            z: currentZ,
+            w, h, l,
+            loadingOrder: loadingCounter
+        });
+
+        usedVolume += (w * h * l);
+        usedWeight += item.weight;
+
+        // Update tracking
+        if (l > sliceMaxL) sliceMaxL = l;
+        if (w > columnMaxW) columnMaxW = w;
+        
+        // Prepare for NEXT item in the same stack (Y-increment)
+        // Note: we ONLY stay in the same stack if this item allows something on top.
+        if (item.stackableBottom) {
+           currentY += h;
+        } else {
+           currentY = 0;
+           currentX += columnMaxW;
+           columnMaxW = 0;
+        }
    }
 
    const remainingGrouped = new Map<string, PacklistItem>();

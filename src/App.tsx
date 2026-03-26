@@ -481,9 +481,14 @@ export default function App() {
                             {item.needsCraning && <span style={{ color: 'var(--danger)', marginLeft: '8px' }}>[Kran]</span>}
                           </div>
                         </div>
-                        <button onClick={(e) => removePacklistItem(item.id, e)} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
-                          {t.btnDelete}
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button onClick={(e) => { e.stopPropagation(); handleEditItem(item); }} style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid rgba(59,130,246,0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }} title={t.btnConfirmEdit}>
+                            ✏️ {lang === 'de' ? 'Bearbeiten' : 'Edit'}
+                          </button>
+                          <button onClick={(e) => removePacklistItem(item.id, e)} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                            {t.btnDelete}
+                          </button>
+                        </div>
                       </div>
                       
                       {activeItemId === item.id && (
