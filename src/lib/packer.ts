@@ -33,6 +33,7 @@ export interface PackedItemInfo {
   l: number;
   w: number;
   h: number;
+  loadingOrder: number;
 }
 
 export interface PackedContainer {
@@ -86,6 +87,7 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
    let usedWeight = 0;
    const packedItems: PackedItemInfo[] = [];
    const remainingItems: PacklistItem[] = [];
+   let loadingCounter = 0;
    
    // Expand distinct items to a sequence of individual items (1 per quantity)
    const itemsToPack: PacklistItem[] = [];
@@ -120,7 +122,7 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
 
        let l = item.length;
        let w = item.width;
-       let h = item.height;
+       const h = item.height;
        
        if (item.rotatable && currentZ + l > container.length && currentZ + w <= container.length) {
            l = item.width;
@@ -154,12 +156,14 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
            continue;
        }
 
+       loadingCounter++;
        packedItems.push({
            item,
            x: currentX,
            y: currentY,
            z: currentZ,
-           w, h, l
+           w, h, l,
+           loadingOrder: loadingCounter
        });
 
        usedVolume += (w * h * l);

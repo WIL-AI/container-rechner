@@ -11,11 +11,22 @@ interface Props {
   onItemClick: (id: string) => void;
 }
 
+function getLoadingOrderColor(order: number, total: number): string {
+  if (total <= 1) return '#3b82f6';
+  const t = (order - 1) / (total - 1);
+  // Green -> Yellow -> Red gradient based on loading order
+  const r = Math.round(34 + t * (239 - 34));
+  const g = Math.round(197 - t * (197 - 68));
+  const b = Math.round(94 - t * (94 - 68));
+  return `rgb(${r},${g},${b})`;
+}
+
 export function ContainerViews({ container, items, lang, activeItemId, onItemClick }: Props) {
   const t = translations[lang];
   const containerL = container.length;
   const containerW = container.width;
   const containerH = container.height;
+  const totalItems = items.length;
 
   const renderBox = (item: PackedItemInfo, view: 'top' | 'side-left' | 'side-right' | 'front') => {
     let left = 0, top = 0, width = 0, height = 0;
@@ -43,11 +54,20 @@ export function ContainerViews({ container, items, lang, activeItemId, onItemCli
     }
 
     const isActive = activeItemId === item.item.id;
+    const orderColor = getLoadingOrderColor(item.loadingOrder, totalItems);
+
+    const tooltipText = [
+      `#${item.loadingOrder} – ${item.item.contentDesc || item.item.packaging}`,
+      `${item.l}×${item.w}×${item.h} mm`,
+      `${t.posFromDoor}: ${item.z} mm`,
+      `${t.posFromFloor}: ${item.y} mm`,
+      `${t.posFromLeft}: ${item.x} mm`
+    ].join('\n');
 
     return (
       <div 
         key={`${item.item.id}-${view}-${item.x}-${item.y}-${item.z}`} 
-        title={`${item.item.contentDesc || item.item.packaging} (${item.l}x${item.w}x${item.h})`}
+        title={tooltipText}
         onClick={() => onItemClick(item.item.id)}
         style={{
           position: 'absolute',
@@ -64,14 +84,25 @@ export function ContainerViews({ container, items, lang, activeItemId, onItemCli
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          fontSize: '0.6rem',
-          color: 'white',
-          fontWeight: 'bold',
           cursor: 'pointer',
-          textShadow: '0 1px 2px rgba(0,0,0,0.8)',
           transition: 'all 0.2s ease'
         }}
       >
+        {/* Loading order badge */}
+        <span style={{
+          fontSize: Math.min(width, height) > 8 ? '0.65rem' : '0.5rem',
+          color: 'white',
+          fontWeight: 'bold',
+          textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+          background: `${orderColor}cc`,
+          borderRadius: '3px',
+          padding: '1px 3px',
+          lineHeight: 1,
+          minWidth: '14px',
+          textAlign: 'center'
+        }}>
+          {item.loadingOrder}
+        </span>
       </div>
     );
   };

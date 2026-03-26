@@ -5,6 +5,7 @@ import type { PacklistItem, PackagingType, PackedItemInfo } from './lib/packer';
 import { getProjects, saveProject, deleteProject } from './lib/db';
 import type { Project } from './lib/db';
 import { ContainerViews } from './components/ContainerViews';
+import { Container3DView } from './components/Container3DView';
 import { translations } from './lib/translations';
 import type { Language } from './lib/translations';
 import './index.css';
@@ -115,11 +116,16 @@ export default function App() {
   }, [packlist, containerSelection]);
 
   const groupItems = (items: PackedItemInfo[]) => {
-    const map = new Map<string, { item: PacklistItem, count: number }>();
+    const map = new Map<string, { item: PacklistItem, count: number, orderMin: number, orderMax: number }>();
     items.forEach(i => {
       const existing = map.get(i.item.id);
-      if(existing) existing.count += 1;
-      else map.set(i.item.id, { item: i.item, count: 1 });
+      if(existing) {
+        existing.count += 1;
+        existing.orderMin = Math.min(existing.orderMin, i.loadingOrder);
+        existing.orderMax = Math.max(existing.orderMax, i.loadingOrder);
+      } else {
+        map.set(i.item.id, { item: i.item, count: 1, orderMin: i.loadingOrder, orderMax: i.loadingOrder });
+      }
     });
     return Array.from(map.values());
   };
@@ -409,6 +415,9 @@ export default function App() {
                                    <span style={{ flex: 1 }}>
                                      <strong>{pi.count}x</strong> {pi.item.contentDesc || pi.item.packaging}
                                    </span>
+                                   <span style={{ color: 'var(--accent)', fontSize: '0.75rem', fontWeight: 'bold', marginRight: '8px', background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                                     #{pi.orderMin === pi.orderMax ? pi.orderMin : `${pi.orderMin}-${pi.orderMax}`}
+                                   </span>
                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
                                      ({pi.item.length}x{pi.item.width}x{pi.item.height})
                                    </span>
@@ -416,6 +425,8 @@ export default function App() {
                               ))}
                             </ul>
                           </div>
+
+                          <Container3DView container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={(id) => setActiveItemId(prev => prev === id ? null : id)} />
 
                           <ContainerViews container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={(id) => setActiveItemId(prev => prev === id ? null : id)} />
 

@@ -70,7 +70,24 @@ export const translations = {
     viewSideLeftSub: 'Tür rechts',
     viewSideRight: 'Seitenansicht (Rechts)',
     viewSideRightSub: 'Tür links',
-    viewFront: 'Frontansicht (Tür)'
+    viewFront: 'Frontansicht (Tür)',
+
+    // 3D View & Loading Order
+    view3DTitle: '3D-Ansicht',
+    loadingOrderLabel: 'Beladeschritt',
+    loadingStepShort: 'Schritt',
+    posFromDoor: 'Ab Tür',
+    posFromFloor: 'Ab Boden',
+    posFromLeft: 'Ab Links',
+    stepControlLabel: 'Belade-Simulation',
+    stepAll: 'Alle anzeigen',
+    stepPlay: 'Abspielen',
+    stepPause: 'Pause',
+    stepReset: 'Zurücksetzen',
+    view3DPresetIso: 'Isometrisch',
+    view3DPresetTop: 'Oben',
+    view3DPresetSide: 'Seite',
+    view3DPresetFront: 'Front'
   },
   en: {
     appTitle: 'Container Calculator',
@@ -140,6 +157,23 @@ export const translations = {
     viewSideLeftSub: 'Doors right',
     viewSideRight: 'Side View (Right)',
     viewSideRightSub: 'Doors left',
-    viewFront: 'Front View (Doors)'
+    viewFront: 'Front View (Doors)',
+
+    // 3D View & Loading Order
+    view3DTitle: '3D View',
+    loadingOrderLabel: 'Loading Step',
+    loadingStepShort: 'Step',
+    posFromDoor: 'From Door',
+    posFromFloor: 'From Floor',
+    posFromLeft: 'From Left',
+    stepControlLabel: 'Loading Simulation',
+    stepAll: 'Show All',
+    stepPlay: 'Play',
+    stepPause: 'Pause',
+    stepReset: 'Reset',
+    view3DPresetIso: 'Isometric',
+    view3DPresetTop: 'Top',
+    view3DPresetSide: 'Side',
+    view3DPresetFront: 'Front'
   }
 };
