@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CONTAINERS } from './lib/containers';
 import { calculateHeterogeneousPacking } from './lib/packer';
 import type { PacklistItem, PackagingType, PackedItemInfo, PackedContainer } from './lib/packer';
@@ -207,6 +207,10 @@ export default function App() {
     setForm(item);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const onItemClick = useCallback((id: string) => {
+    setActiveItemId(prev => prev === id ? null : id);
+  }, []);
 
   const result = useMemo(() => {
     if (packlist.length === 0) return null;
@@ -500,7 +504,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="glass-panel animate-in" style={{ animationDelay: '0.3s', padding: '1.5rem' }}>
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
              <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>{t.loadPlanTitle}</h2>
              {packlist.length === 0 ? (
                <div style={{ color: 'var(--text-secondary)', textAlign: 'center', margin: '1rem 0' }}>
@@ -589,9 +593,9 @@ export default function App() {
                             </ul>
                           </div>
 
-                          <Container3DView container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={(id) => setActiveItemId(prev => prev === id ? null : id)} />
+                          <Container3DView container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={onItemClick} />
 
-                          <ContainerViews container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={(id) => setActiveItemId(prev => prev === id ? null : id)} />
+                          <ContainerViews container={pc.container} items={pc.items} lang={lang} activeItemId={activeItemId} onItemClick={onItemClick} />
 
                           {/* Efficiency explanation */}
                           <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>

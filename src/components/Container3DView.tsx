@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Text, Line } from '@react-three/drei';
+import { OrbitControls, Text, Line, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import type { PackedItemInfo } from '../lib/packer';
 import type { ContainerType } from '../lib/containers';
@@ -98,11 +98,11 @@ function PackedBox({ item, isActive, dimmed, onClick, showLabel }: {
   );
 }
 
-// Stable camera initializer to prevent resets
-function SceneInit({ target }: { target: THREE.Vector3 }) {
+// Stable camera setup component
+function StableCamera({ target }: { target: THREE.Vector3 }) {
   const { camera } = useThree();
   const initRef = useRef(false);
-  
+
   useEffect(() => {
     if (!initRef.current) {
       camera.position.set(8, 6, -4);
@@ -110,11 +110,11 @@ function SceneInit({ target }: { target: THREE.Vector3 }) {
       initRef.current = true;
     }
   }, [camera, target]);
-  
-  return null;
+
+  return <PerspectiveCamera makeDefault position={[8, 6, -4]} fov={35} />;
 }
 
-export function Container3DView({ container, items, lang, activeItemId, onItemClick }: Props) {
+export const Container3DView = memo(({ container, items, lang, activeItemId, onItemClick }: Props) => {
   const t = translations[lang];
   const [visibleStep, setVisibleStep] = useState<number>(items.length);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -200,9 +200,8 @@ export function Container3DView({ container, items, lang, activeItemId, onItemCl
         background: 'linear-gradient(180deg, #0a0f1e 0%, #141e33 100%)',
         cursor: 'grab'
       }}>
-        {/* HARD STABLE KEY: Never re-mounts the Canvas, which stops camera resets */}
-        <Canvas key="stable-3d-viewer" camera={{ position: [8, 6, -4], fov: 35 }} gl={{ antialias: true }}>
-          <SceneInit target={target} />
+        <Canvas key="stable-3d-viewer" gl={{ antialias: true }}>
+          <StableCamera target={target} />
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, -5]} intensity={0.8} />
           <directionalLight position={[-5, 8, 10]} intensity={0.4} />
@@ -213,7 +212,7 @@ export function Container3DView({ container, items, lang, activeItemId, onItemCl
               dimmed={activeItemId !== null && activeItemId !== item.item.id}
               onClick={() => onItemClick(item.item.id)} showLabel={true} />
           ))}
-          <OrbitControls ref={controlsRef} target={target}
+          <OrbitControls ref={controlsRef} target={target} makeDefault
             enableDamping={false} minDistance={2} maxDistance={20}
           />
         </Canvas>
@@ -238,4 +237,4 @@ export function Container3DView({ container, items, lang, activeItemId, onItemCl
       </div>
     </div>
   );
-}
+});
