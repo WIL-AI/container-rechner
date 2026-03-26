@@ -50,14 +50,7 @@ export interface PackingPlan {
   unpackedItems: { item: PacklistItem, missingCount: number, reason: string }[];
 }
 
-/**
- * Simulates packing into a specific container and returns how much volume was used.
- * This is used for dry-runs to pick the best container type in Auto-Mix mode.
- */
-function dryRunPack(items: PacklistItem[], container: ContainerType): number {
-    const { usedVolume } = packIntoContainer3D(items, container);
-    return usedVolume;
-}
+
 
 function findBestContainerForItems(items: PacklistItem[], containerSelection: string): ContainerType {
   const needsCraning = items.some(i => i.needsCraning);
@@ -84,28 +77,39 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   // If we have only one candidate after filters, use it.
   if (candidates.length === 1) return candidates[0];
 
-  // Logic: Minimizing Container Count.
-  // We simulate packing for each candidate and choose the one that captures the MOST volume.
-  // This naturally favors the larger containers IF they are needed, OR the smaller ones if they fit everything perfectly.
+  // Logic: Minimizing Container Count and Footprint.
+  // We simulate packing for each candidate and choose based on a Score:
+  // 1. Completion Rate: (Packed Items / Remaining Items)
+  // 2. Volume Efficiency: (Packed Volume)
   
   let bestContainer = candidates[0];
-  let maxPackedVolume = -1;
+  let bestScore = -1;
 
   for (const c of candidates) {
-    const vol = dryRunPack(items, c);
+    const { packedItems } = packIntoContainer3D(items, c);
     
-    // Preference logic:
-    // 1. If this container fits ALL items, and its total volume is smaller than the current best that also fits all items, pick it.
-    // 2. Otherwise, if it fits more volume than the current best, pick it.
-    if (vol > maxPackedVolume) {
-        maxPackedVolume = vol;
+    // Calculate a score:
+    // Base score is the number of packed items (favoring completion).
+    // Plus a fractional bonus for volume utilization.
+    const isComplete = packedItems.length === items.length;
+    const completionBonus = isComplete ? 1000000 : 0;
+    const score = completionBonus + packedItems.length;
+
+    if (score > bestScore) {
+        bestScore = score;
         bestContainer = c;
-    } else if (vol === maxPackedVolume) {
-        // Tie-breaker: prefer the smaller container to save costs/space
+    } else if (score === bestScore) {
+        // Tie-breaker: prefer the smaller container
         const currentSize = bestContainer.length * bestContainer.width * bestContainer.height;
         const candidateSize = c.length * c.width * c.height;
         if (candidateSize < currentSize) {
            bestContainer = c;
+        } else if (candidateSize === currentSize) {
+           // If sizes are equal, check usedVolume specifically
+           // and favor the one with higher payload capacity
+           if (c.maxPayload > bestContainer.maxPayload) {
+              bestContainer = c;
+           }
         }
     }
   }
