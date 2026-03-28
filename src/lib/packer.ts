@@ -52,7 +52,7 @@ export interface PackingPlan {
 
 
 
-function findBestContainerForItems(items: PacklistItem[], containerSelection: string): ContainerType {
+function findBestContainerForItems(items: PacklistItem[], containerSelection: string, groupByDescription: boolean): ContainerType {
   const needsCraning = items.some(i => i.needsCraning);
   const needsHC = items.some(i => i.height > 2390 || (!i.rotatable && i.width > 2390 && i.length > 2390));
 
@@ -86,7 +86,7 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   let bestScore = -1;
 
   for (const c of candidates) {
-    const { packedItems, usedVolume } = packIntoContainer3D(items, c);
+    const { packedItems, usedVolume } = packIntoContainer3D(items, c, groupByDescription);
     
     // Calculate a score:
     // Base score is the number of packed items (favoring greedy filling).
@@ -121,7 +121,7 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   return bestContainer;
 }
 
-function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
+function packIntoContainer3D(items: PacklistItem[], container: ContainerType, groupByDescription: boolean = false) {
    let usedVolume = 0;
    let usedWeight = 0;
    const packedItems: PackedItemInfo[] = [];
@@ -148,6 +148,14 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
        
        if (pA !== pB) {
           return pA - pB;
+       }
+
+       if (groupByDescription) {
+           const descA = a.contentDesc || a.packaging;
+           const descB = b.contentDesc || b.packaging;
+           if (descA !== descB) {
+               return descA.localeCompare(descB);
+           }
        }
        
        const areaA = a.length * a.width;
@@ -293,7 +301,8 @@ export interface CustomFleetItem {
 export function calculateHeterogeneousPacking(
   packlist: PacklistItem[],
   containerSelection: string,
-  customFleet: CustomFleetItem[] = []
+  customFleet: CustomFleetItem[] = [],
+  groupByDescription: boolean = false
 ): PackingPlan {
   const plan: PackingPlan = { packedContainers: [], unpackedItems: [] };
   
@@ -319,10 +328,10 @@ export function calculateHeterogeneousPacking(
          if (fleetSequence.length === 0) break; // Fleet is exhausted
          container = fleetSequence.shift()!;
      } else {
-         container = findBestContainerForItems(currentItems, containerSelection);
+         container = findBestContainerForItems(currentItems, containerSelection, groupByDescription);
      }
 
-     const { packedItems, remainingItems, usedVolume, usedWeight } = packIntoContainer3D(currentItems, container);
+     const { packedItems, remainingItems, usedVolume, usedWeight } = packIntoContainer3D(currentItems, container, groupByDescription);
 
      if (packedItems.length === 0) {
         if (containerSelection === 'fleet') {

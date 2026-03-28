@@ -53,6 +53,7 @@ export default function App() {
   const [customFleet, setCustomFleet] = useState<CustomFleetItem[]>([]);
   const [packlist, setPacklist] = useState<PacklistItem[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [groupByDescription, setGroupByDescription] = useState<boolean>(false);
 
   // Auto-sync colors based on label
   useEffect(() => {
@@ -390,8 +391,8 @@ export default function App() {
 
   const result = useMemo(() => {
     if (packlist.length === 0) return null;
-    return calculateHeterogeneousPacking(packlist, containerSelection, customFleet);
-  }, [packlist, containerSelection, customFleet]);
+    return calculateHeterogeneousPacking(packlist, containerSelection, customFleet, groupByDescription);
+  }, [packlist, containerSelection, customFleet, groupByDescription]);
 
   const addFleetItem = () => {
      setCustomFleet(prev => [...prev, { containerId: CONTAINERS[0].id, count: 1 }]);
@@ -676,7 +677,11 @@ export default function App() {
           <div className="glass-panel animate-in" style={{ animationDelay: '0.2s', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{t.packlistTitle}</h2>
-               <div style={{ display: 'flex', gap: '0.5rem' }}>
+               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)' }} title={lang === 'de' ? 'Aktiviert: Packstücke mit exakt gleicher Bezeichnung landen bevorzugt gebündelt im selben Container' : 'Enabled: Items with identical descriptions are strictly grouped into the same container'}>
+                    <input type="checkbox" checked={groupByDescription} onChange={e => setGroupByDescription(e.target.checked)} />
+                    {lang === 'de' ? 'Gleiche bündeln' : 'Group similar'}
+                 </label>
                  {packlist.length > 0 && (
                    <button type="button" onClick={handlePrintPacklist} className="btn" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-block', margin: 0, width: 'auto' }}>
                      {t.btnPrintPacklist}
