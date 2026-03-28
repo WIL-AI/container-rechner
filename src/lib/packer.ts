@@ -2,7 +2,7 @@ import type { ContainerType } from './containers';
 import { CONTAINERS } from './containers';
 
 export type PackagingType = 'Europalette' | 'Einwegpalette' | 'Kiste' | 'Verschlag' | 'Karton' | 'Fass' | 'Rollen' | 'Unverpackt' | 'Sonstige' | 'Karton auf Palette' | 'Euro-Gitterbox';
-export type PriorityLevel = 'hoch' | 'normal' | 'niedrig';
+export type PriorityLevel = 1 | 2 | 3 | 4 | 5 | 'hoch' | 'normal' | 'niedrig';
 
 export interface PacklistItem {
   id: string;
@@ -135,11 +135,19 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
        }
    }
 
-    // Sort: Priority -> Footprint (group similar footprints for stacking) -> Height
-    itemsToPack.sort((a,b) => {
-       const pWeight = { hoch: 3, normal: 2, niedrig: 1 };
-       if (pWeight[a.priority] !== pWeight[b.priority]) {
-          return pWeight[b.priority] - pWeight[a.priority];
+    // Sort: Priority (1 first, 5 last) -> Footprint (group similar footprints for stacking) -> Height
+  itemsToPack.sort((a, b) => {
+       const getPrioValue = (p: PriorityLevel): number => {
+         if (typeof p === 'number') return p;
+         if (p === 'hoch') return 1;
+         if (p === 'niedrig') return 5;
+         return 3;
+       };
+       const pA = getPrioValue(a.priority);
+       const pB = getPrioValue(b.priority);
+       
+       if (pA !== pB) {
+          return pA - pB;
        }
        
        const areaA = a.length * a.width;

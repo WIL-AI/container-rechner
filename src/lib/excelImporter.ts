@@ -87,7 +87,7 @@ export async function parseExcelFile(file: File): Promise<PacklistItem[]> {
             height,
             packaging,
             weight,
-            priority: 'normal',
+            priority: 3,
             rotatable,
             stackableBottom,
             stackableTop,

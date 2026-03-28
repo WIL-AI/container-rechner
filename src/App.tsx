@@ -16,7 +16,7 @@ const PACKAGING_TYPES: PackagingType[] = ['Europalette', 'Einwegpalette', 'Kiste
 const DEFAULT_FORM: Partial<PacklistItem> = {
   quantity: 1, contentDesc: '', packaging: 'Europalette', 
   length: 1200, width: 800, height: 1000, weight: 500,
-  priority: 'normal', rotatable: false, stackableBottom: false, stackableTop: false, 
+  priority: 3, rotatable: false, stackableBottom: false, stackableTop: false, 
   needsCraning: false, label: '', partialDeliveryId: '', color: '#3b82f6'
 };
 
@@ -138,6 +138,9 @@ export default function App() {
       let finalVal: string | number | boolean = type === 'number' ? Number(value) : value;
       if (type === 'number' && (name === 'length' || name === 'width' || name === 'height')) {
         finalVal = Math.round(Number(value) * 10);
+      }
+      if (name === 'priority') {
+        finalVal = Number(value);
       }
       return { ...prev, [name]: finalVal };
     });
@@ -582,9 +585,11 @@ export default function App() {
                <div className="input-group" style={{ gridColumn: 'span 2' }}>
                  <label className="input-label">{t.priorityLabel}</label>
                  <select name="priority" value={form.priority} onChange={handleInputChange} className="input-field">
-                   <option value="hoch">{t.prioHigh}</option>
-                   <option value="normal">{t.prioNormal}</option>
-                   <option value="niedrig">{t.prioLow}</option>
+                   <option value="1">{t.prio1}</option>
+                   <option value="2">{t.prio2}</option>
+                   <option value="3">{t.prio3}</option>
+                   <option value="4">{t.prio4}</option>
+                   <option value="5">{t.prio5}</option>
                  </select>
                </div>
                
@@ -719,7 +724,15 @@ export default function App() {
                       
                       {activeItemId === item.id && (
                          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                            <div><strong>Priorität:</strong> {item.priority === 'hoch' ? t.prioHigh : (item.priority === 'niedrig' ? t.prioLow : t.prioNormal)}</div>
+                            <div><strong>Priorität:</strong> {
+                              item.priority === 1 ? t.prio1 :
+                              item.priority === 2 ? t.prio2 :
+                              item.priority === 3 ? t.prio3 :
+                              item.priority === 4 ? t.prio4 :
+                              item.priority === 5 ? t.prio5 :
+                              item.priority === 'hoch' ? t.prio1 :
+                              item.priority === 'niedrig' ? t.prio5 : t.prio3
+                            }</div>
                             <div><strong>Verpackung:</strong> {item.packaging}</div>
                             {item.rotatable && <div><strong>Rotierbar:</strong> Ja</div>}
                             {item.stackableBottom && <div><strong>Stapelbar:</strong> Unten</div>}
