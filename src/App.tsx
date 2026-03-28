@@ -473,7 +473,7 @@ export default function App() {
                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{t.packlistTitle}</h2>
                <div>
                  <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} style={{ display: 'none' }} />
-                 <label htmlFor="excel-upload" className="btn" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-block', margin: 0 }}>
+                 <label htmlFor="excel-upload" className="btn" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-block', margin: 0, width: 'auto' }}>
                    {t.btnImportExcel}
                  </label>
                </div>
