@@ -88,21 +88,39 @@ export function ContainerViews({ container, items, lang, activeItemId, onItemCli
           transition: 'all 0.2s ease'
         }}
       >
-        {/* Loading order badge */}
-        <span style={{
-          fontSize: Math.min(width, height) > 8 ? '0.65rem' : '0.5rem',
-          color: 'white',
-          fontWeight: 'bold',
-          textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-          background: `${orderColor}cc`,
-          borderRadius: '3px',
-          padding: '1px 3px',
-          lineHeight: 1,
-          minWidth: '14px',
-          textAlign: 'center'
-        }}>
-          {item.loadingOrder}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2px', gap: '2px', width: '100%', boxSizing: 'border-box' }}>
+          {/* Loading order badge */}
+          <span style={{
+            fontSize: Math.min(width, height) > 8 ? '0.65rem' : '0.5rem',
+            color: 'white',
+            fontWeight: 'bold',
+            textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+            background: `${orderColor}cc`,
+            borderRadius: '3px',
+            padding: '1px 3px',
+            lineHeight: 1,
+            minWidth: '14px',
+            textAlign: 'center'
+          }}>
+            {item.loadingOrder}
+          </span>
+          {/* Description Text */}
+          <span style={{
+            fontSize: Math.min(width, height) > 15 ? '0.5rem' : '0.35rem',
+            color: 'white',
+            textAlign: 'center',
+            textShadow: '0 1px 2px rgba(0,0,0,0.9)',
+            lineHeight: 1,
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            wordWrap: 'break-word',
+            width: '100%'
+          }}>
+            {item.item.contentDesc || item.item.packaging}
+          </span>
+        </div>
       </div>
     );
   };

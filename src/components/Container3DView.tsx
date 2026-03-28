@@ -77,14 +77,27 @@ function PackedBox({ item, isActive, dimmed, onClick }: {
         <meshBasicMaterial color="#ffffff" wireframe transparent opacity={dimmed ? 0.05 : 0.3} />
       </mesh>
       {!dimmed && (
-        <Text
-          position={[0, 0, l / 2 + 0.01]}
-          fontSize={Math.min(w, h) * 0.4}
-          color="white" anchorX="center" anchorY="middle"
-          outlineWidth={0.01} outlineColor="#000000"
-        >
-          {`${item.loadingOrder}`}
-        </Text>
+        <group position={[0, 0, l / 2 + 0.01]}>
+          <Text
+            position={[0, Math.min(w, h) * 0.15, 0]}
+            fontSize={Math.min(w, h) * 0.3}
+            color="white" anchorX="center" anchorY="middle"
+            outlineWidth={0.01} outlineColor="#000000"
+          >
+            {`#${item.loadingOrder}`}
+          </Text>
+          <Text
+            position={[0, -Math.min(w, h) * 0.15, 0]}
+            fontSize={Math.min(w * 0.1, h * 0.15, 0.1)} 
+            color="white" anchorX="center" anchorY="middle"
+            outlineWidth={0.005} outlineColor="#000000"
+            maxWidth={w * 0.9}
+            textAlign="center"
+            overflowWrap="break-word"
+          >
+            {item.item.contentDesc || item.item.packaging}
+          </Text>
+        </group>
       )}
     </group>
   );
