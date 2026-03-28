@@ -49,6 +49,10 @@ export const translations = {
     emptyPacklist: 'Noch keine Stücke erfasst.',
     btnDelete: 'Löschen',
     doubleClickHint: 'Doppelklick zum Bearbeiten',
+    btnImportExcel: '📄 Excel/CSV Import',
+    importError: 'Fehler beim Lesen der Excel-Datei.',
+    importSuccess: 'Packstücke erfolgreich importiert!',
+    importWait: 'Lese Datei...',
     
     loadPlanTitle: '3D Ladeplan',
     loadPlanEmpty: 'Bereit zur automatischen Kalkulation.',
@@ -161,6 +165,10 @@ export const translations = {
     emptyPacklist: 'No items recorded yet.',
     btnDelete: 'Delete',
     doubleClickHint: 'Double click to edit',
+    btnImportExcel: '📄 Excel/CSV Import',
+    importError: 'Error reading Excel file.',
+    importSuccess: 'Pack items imported successfully!',
+    importWait: 'Reading file...',
     
     loadPlanTitle: '3D Load Plan',
     loadPlanEmpty: 'Ready for automatic calculation.',

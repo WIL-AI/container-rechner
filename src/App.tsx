@@ -8,6 +8,7 @@ import { ContainerViews } from './components/ContainerViews';
 import { Container3DView } from './components/Container3DView';
 import { translations } from './lib/translations';
 import type { Language } from './lib/translations';
+import { parseExcelFile } from './lib/excelImporter';
 import './index.css';
 
 const PACKAGING_TYPES: PackagingType[] = ['Europalette', 'Einwegpalette', 'Kiste', 'Verschlag', 'Karton', 'Fass', 'Rollen', 'Unverpackt', 'Sonstige', 'Karton auf Palette', 'Euro-Gitterbox'];
@@ -211,6 +212,22 @@ export default function App() {
   const onItemClick = useCallback((id: string) => {
     setActiveItemId(prev => prev === id ? null : id);
   }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const imported = await parseExcelFile(file);
+      if (imported.length > 0) {
+        setPacklist(prev => [...prev, ...imported]);
+        alert(t.importSuccess);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(t.importError);
+    }
+    e.target.value = '';
+  };
 
   const result = useMemo(() => {
     if (packlist.length === 0) return null;
@@ -452,7 +469,15 @@ export default function App() {
           </div>
 
           <div className="glass-panel animate-in" style={{ animationDelay: '0.2s', padding: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.25rem' }}>{t.packlistTitle}</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{t.packlistTitle}</h2>
+               <div>
+                 <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} style={{ display: 'none' }} />
+                 <label htmlFor="excel-upload" className="btn" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-block', margin: 0 }}>
+                   {t.btnImportExcel}
+                 </label>
+               </div>
+            </div>
             {packlist.length === 0 ? (
                <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>{t.emptyPacklist}</p>
             ) : (
