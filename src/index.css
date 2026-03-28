@@ -213,7 +213,7 @@ p.subtitle {
 
 .app-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 2rem;
   align-items: start;
   width: 100%;
