@@ -20,6 +20,28 @@ const DEFAULT_FORM: Partial<PacklistItem> = {
   needsCraning: false, label: '', partialDeliveryId: '', color: '#3b82f6'
 };
 
+const applyLabelColors = (items: PacklistItem[]): PacklistItem[] => {
+  const distinctLabels: string[] = [];
+  items.forEach(i => {
+    const rawLabel = i.label?.trim() || '';
+    if (rawLabel !== '' && !distinctLabels.includes(rawLabel)) {
+      distinctLabels.push(rawLabel);
+    }
+  });
+
+  const palette = ['#eab308', '#ef4444', '#a855f7', '#22c55e', '#f97316', '#ec4899', '#14b8a6', '#6366f1', '#84cc16'];
+
+  return items.map(item => {
+    const rawLabel = item.label?.trim() || '';
+    if (!rawLabel) {
+      return item.color !== '#3b82f6' ? { ...item, color: '#3b82f6' } : item;
+    }
+    const idx = distinctLabels.indexOf(rawLabel);
+    const assignedColor = palette[idx % palette.length];
+    return item.color !== assignedColor ? { ...item, color: assignedColor } : item;
+  });
+};
+
 export default function App() {
   const [lang, setLang] = useState<Language>('de');
   const t = translations[lang];
@@ -31,6 +53,15 @@ export default function App() {
   const [customFleet, setCustomFleet] = useState<CustomFleetItem[]>([]);
   const [packlist, setPacklist] = useState<PacklistItem[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Auto-sync colors based on label
+  useEffect(() => {
+    const recolored = applyLabelColors(packlist);
+    const changed = recolored.some((item, i) => packlist[i].color !== item.color);
+    if (changed) {
+       setPacklist(recolored);
+    }
+  }, [packlist]);
   
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [savedProjects, setSavedProjects] = useState<Project[]>([]);
