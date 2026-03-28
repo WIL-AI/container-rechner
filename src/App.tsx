@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CONTAINERS } from './lib/containers';
 import { calculateHeterogeneousPacking } from './lib/packer';
-import type { PacklistItem, PackagingType, PackedItemInfo, PackedContainer } from './lib/packer';
+import type { PacklistItem, PackagingType, PackedItemInfo, PackedContainer, CustomFleetItem } from './lib/packer';
 import { getProjects, saveProject, deleteProject } from './lib/db';
 import type { Project } from './lib/db';
 import { ContainerViews } from './components/ContainerViews';
@@ -28,6 +28,7 @@ export default function App() {
   const [projectName, setProjectName] = useState<string>('');
   const [projectEditor, setProjectEditor] = useState<string>('');
   const [containerSelection, setContainerSelection] = useState<string>('auto');
+  const [customFleet, setCustomFleet] = useState<CustomFleetItem[]>([]);
   const [packlist, setPacklist] = useState<PacklistItem[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
@@ -47,24 +48,41 @@ export default function App() {
   useEffect(() => {
     if (!projectName && packlist.length === 0) return;
     const timeout = setTimeout(() => {
+      let savedSelection = containerSelection;
+      if (containerSelection === 'fleet') {
+         savedSelection = 'fleet:' + customFleet.map(f => `${f.containerId}=${f.count}`).join(';');
+      }
       saveProject({
         id: projectId,
         name: projectName || (lang === 'de' ? 'Unbenanntes Projekt' : 'Unnamed Project'),
         updatedAt: Date.now(),
-        containerSelection,
+        containerSelection: savedSelection,
         packlist
       });
     }, 1000);
     return () => clearTimeout(timeout);
-  }, [projectId, projectName, containerSelection, packlist, lang]);
+  }, [projectId, projectName, containerSelection, customFleet, packlist, lang]);
 
   const loadProject = (p: Project) => {
-    setProjectId(p.id); setProjectName(p.name); setContainerSelection(p.containerSelection); setPacklist(p.packlist);
+    setProjectId(p.id); setProjectName(p.name); setPacklist(p.packlist);
+    if (p.containerSelection.startsWith('fleet:')) {
+       setContainerSelection('fleet');
+       const parts = p.containerSelection.split(':')[1].split(';').filter(Boolean);
+       const fleet = parts.map(pt => {
+          const [cid, cnt] = pt.split('=');
+          return { containerId: cid, count: Number(cnt) };
+       });
+       setCustomFleet(fleet);
+    } else {
+       setContainerSelection(p.containerSelection);
+       setCustomFleet([]);
+    }
     setShowProjectsModal(false); setEditingItemId(null); setForm(DEFAULT_FORM);
   };
 
   const createNewProject = () => {
     setProjectId(`proj-${Date.now()}`); setProjectName(''); setContainerSelection('auto'); setPacklist([]);
+    setCustomFleet([]);
     setShowProjectsModal(false); setEditingItemId(null); setForm(DEFAULT_FORM);
   };
 
@@ -111,6 +129,73 @@ export default function App() {
   const cancelEdit = () => {
     setEditingItemId(null);
     setForm({ ...DEFAULT_FORM, color: form.color });
+  };
+
+  const handlePrintPacklist = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const loc = lang === 'de' ? 'de-DE' : 'en-US';
+    const dateStr = new Date().toLocaleString(loc);
+    
+    const itemsHtml = packlist.map((it: PacklistItem, idx: number) => `
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;">${idx + 1}</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.quantity}x</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.contentDesc || it.packaging}</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.length / 10} x ${it.width / 10} x ${it.height / 10} cm</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.weight} kg</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${t.appTitle} - ${t.packlistTitle}</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; color: #333; }
+            h1 { color: #1a2744; margin-bottom: 5px; }
+            .header-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background: #f1f5f9; text-align: left; border: 1px solid #ddd; padding: 10px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h1>${t.packlistTitle}</h1>
+              <p style="margin: 0; color: #666;">${projectName || '-'}</p>
+            </div>
+            <div style="text-align: right;">
+              <p><strong>${t.printDateLabel}:</strong> ${dateStr}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>${t.quantityLabel}</th>
+                <th>${t.contentDescLabel}</th>
+                <th>Maße (LxBxH)</th>
+                <th>${t.weightLabel}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <p class="no-print" style="margin-top: 40px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+              Drucken / Print
+            </button>
+          </p>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const handlePrint = (pc: PackedContainer) => {
@@ -237,8 +322,21 @@ export default function App() {
 
   const result = useMemo(() => {
     if (packlist.length === 0) return null;
-    return calculateHeterogeneousPacking(packlist, containerSelection);
-  }, [packlist, containerSelection]);
+    return calculateHeterogeneousPacking(packlist, containerSelection, customFleet);
+  }, [packlist, containerSelection, customFleet]);
+
+  const addFleetItem = () => {
+     setCustomFleet(prev => [...prev, { containerId: CONTAINERS[0].id, count: 1 }]);
+  };
+  const removeFleetItem = (idx: number) => {
+     setCustomFleet(prev => prev.filter((_, i) => i !== idx));
+  };
+  const handleFleetCountChange = (idx: number, count: number) => {
+     setCustomFleet(prev => prev.map((f, i) => i === idx ? { ...f, count: Math.max(1, count) } : f));
+  };
+  const handleFleetTypeChange = (idx: number, containerId: string) => {
+     setCustomFleet(prev => prev.map((f, i) => i === idx ? { ...f, containerId } : f));
+  };
 
   const formatPosition = (x: number, y: number, z: number, cW: number, cL: number) => {
     const area = z < cL / 3 ? t.posBack : z < (cL * 2) / 3 ? t.posMiddle : t.posFront;
@@ -332,9 +430,34 @@ export default function App() {
                    <p style={{ margin: 0, fontSize: '0.85rem' }}>{t.autoMixDesc}</p>
                </div>
                
+               <div 
+                  className={`radio-card ${containerSelection === 'fleet' ? 'active' : ''}`} 
+                  onClick={() => setContainerSelection('fleet')} 
+                  style={{ padding: '1rem', width: '100%', boxSizing: 'border-box' }}
+               >
+                   <h3 style={{ fontSize: '1.1rem', margin: '0 0 4px 0' }}>🚛 {t.manualFleetTitle}</h3>
+                   <p style={{ margin: 0, fontSize: '0.85rem' }}>{t.manualFleetDesc}</p>
+                   
+                   {containerSelection === 'fleet' && (
+                     <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
+                        {customFleet.map((f, idx) => (
+                           <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                             <input type="number" min="1" value={f.count} onChange={e => handleFleetCountChange(idx, Number(e.target.value))} className="input-field" style={{ width: '70px', padding: '0.4rem' }} />
+                             <span style={{ color: 'var(--text-secondary)' }}>x</span>
+                             <select value={f.containerId} onChange={e => handleFleetTypeChange(idx, e.target.value)} className="input-field" style={{ flex: 1, padding: '0.4rem' }}>
+                               {CONTAINERS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                             </select>
+                             <button type="button" onClick={() => removeFleetItem(idx)} className="btn" style={{ width: 'auto', background: 'transparent', color: 'var(--danger)', padding: '0.4rem' }}>🗑️</button>
+                           </div>
+                        ))}
+                        <button type="button" onClick={addFleetItem} className="btn" style={{ background: 'rgba(255,255,255,0.1)', padding: '0.5rem', width: 'auto', alignSelf: 'flex-start', fontSize: '0.85rem', marginTop: '0.5rem' }}>{t.fleetAddBtn}</button>
+                     </div>
+                   )}
+               </div>
+
                <div className="input-group">
                  <label className="input-label" style={{ marginBottom: '8px' }}>{t.manualContainerLabel}</label>
-                 <select value={containerSelection === 'auto' ? '' : containerSelection} onChange={e => setContainerSelection(e.target.value)} className="input-field" style={{ width: '100%', padding: '0.75rem' }}>
+                 <select value={['auto', 'fleet'].includes(containerSelection) ? '' : containerSelection} onChange={e => setContainerSelection(e.target.value)} className="input-field" style={{ width: '100%', padding: '0.75rem' }}>
                     <option value="" disabled>-- {t.manualContainerLabel} --</option>
                     {CONTAINERS.map(c => (
                       <option key={c.id} value={c.id}>{c.name} (Max. {c.maxPayload.toLocaleString('de-DE')} kg)</option>
@@ -459,7 +582,9 @@ export default function App() {
                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
                   {containerSelection === 'auto' 
                     ? (lang === 'de' ? '🤖 Logistik-KI (Auto-Mix)' : '🤖 Logistics AI (Auto-Mix)')
-                    : CONTAINERS.find(c => c.id === containerSelection)?.name}
+                    : (containerSelection === 'fleet' 
+                         ? (lang === 'de' ? '🚛 Manuelle Flotte' : '🚛 Custom Fleet')
+                         : CONTAINERS.find(c => c.id === containerSelection)?.name)}
                 </div>
              </div>
              {containerSelection === 'auto' && result && result.packedContainers.length > 0 && (
@@ -477,7 +602,12 @@ export default function App() {
           <div className="glass-panel animate-in" style={{ animationDelay: '0.2s', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{t.packlistTitle}</h2>
-               <div>
+               <div style={{ display: 'flex', gap: '0.5rem' }}>
+                 {packlist.length > 0 && (
+                   <button type="button" onClick={handlePrintPacklist} className="btn" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-block', margin: 0, width: 'auto' }}>
+                     {t.btnPrintPacklist}
+                   </button>
+                 )}
                  <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} style={{ display: 'none' }} />
                  <label htmlFor="excel-upload" className="btn" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-block', margin: 0, width: 'auto' }}>
                    {t.btnImportExcel}

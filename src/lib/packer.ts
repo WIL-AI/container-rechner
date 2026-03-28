@@ -277,28 +277,57 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType) {
    };
 }
 
+export interface CustomFleetItem {
+  containerId: string;
+  count: number;
+}
+
 export function calculateHeterogeneousPacking(
   packlist: PacklistItem[],
-  containerSelection: string
+  containerSelection: string,
+  customFleet: CustomFleetItem[] = []
 ): PackingPlan {
   const plan: PackingPlan = { packedContainers: [], unpackedItems: [] };
   
   let currentItems = [...packlist];
   let safetyIterator = 0;
 
+  // Build the exact container sequence if 'fleet' mode
+  const fleetSequence: import('./containers').ContainerType[] = [];
+  if (containerSelection === 'fleet') {
+      for (const item of customFleet) {
+          const c = CONTAINERS.find(x => x.id === item.containerId);
+          if (c) {
+              for (let i = 0; i < item.count; i++) fleetSequence.push(c);
+          }
+      }
+  }
+
   while (currentItems.length > 0 && safetyIterator < 30) {
      safetyIterator++;
      
-     const container = findBestContainerForItems(currentItems, containerSelection);
+     let container: import('./containers').ContainerType;
+     if (containerSelection === 'fleet') {
+         if (fleetSequence.length === 0) break; // Fleet is exhausted
+         container = fleetSequence.shift()!;
+     } else {
+         container = findBestContainerForItems(currentItems, containerSelection);
+     }
+
      const { packedItems, remainingItems, usedVolume, usedWeight } = packIntoContainer3D(currentItems, container);
 
      if (packedItems.length === 0) {
-        const unp = remainingItems.shift();
-        if (unp) {
-           plan.unpackedItems.push({ item: unp, missingCount: unp.quantity, reason: 'Maße/Gewicht überschreiten alle Grenzen dieses Containers.' });
+        if (containerSelection === 'fleet') {
+           // Container is empty but we couldn't pack the next item. Try next in fleet.
+           continue;
+        } else {
+           const unp = remainingItems.shift();
+           if (unp) {
+              plan.unpackedItems.push({ item: unp, missingCount: unp.quantity, reason: 'Maße/Gewicht überschreiten alle Grenzen dieses Containers.' });
+           }
+           currentItems = remainingItems;
+           continue;
         }
-        currentItems = remainingItems;
-        continue;
      }
 
      const containerVol = container.length * container.width * container.height;
@@ -317,7 +346,8 @@ export function calculateHeterogeneousPacking(
 
   if (currentItems.length > 0) {
      for (const item of currentItems) {
-        plan.unpackedItems.push({ item, missingCount: item.quantity, reason: 'Abbruch: Max. Containeranzahl erreicht.' });
+        const reason = containerSelection === 'fleet' ? 'Abbruch: Fuhrpark-Kapazität vollständig ausgeschöpft.' : 'Abbruch: Max. Containeranzahl erreicht.';
+        plan.unpackedItems.push({ item, missingCount: item.quantity, reason });
      }
   }
 
