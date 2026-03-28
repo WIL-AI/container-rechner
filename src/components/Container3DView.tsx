@@ -76,29 +76,38 @@ function PackedBox({ item, isActive, dimmed, onClick }: {
         <boxGeometry args={[w, h, l]} />
         <meshBasicMaterial color="#ffffff" wireframe transparent opacity={dimmed ? 0.05 : 0.3} />
       </mesh>
-      {!dimmed && (
-        <group position={[0, 0, l / 2 + 0.01]}>
-          <Text
-            position={[0, Math.min(w, h) * 0.15, 0]}
-            fontSize={Math.min(w, h) * 0.3}
-            color="white" anchorX="center" anchorY="middle"
-            outlineWidth={0.01} outlineColor="#000000"
-          >
-            {`#${item.loadingOrder}`}
-          </Text>
-          <Text
-            position={[0, -Math.min(w, h) * 0.15, 0]}
-            fontSize={Math.min(w * 0.1, h * 0.15, 0.1)} 
-            color="white" anchorX="center" anchorY="middle"
-            outlineWidth={0.005} outlineColor="#000000"
-            maxWidth={w * 0.9}
-            textAlign="center"
-            overflowWrap="break-word"
-          >
-            {item.item.contentDesc || item.item.packaging}
-          </Text>
-        </group>
-      )}
+      {!dimmed && (() => {
+        const extra = [];
+        if (item.item.label) extra.push(`L:${item.item.label}`);
+        if (item.item.partialDeliveryId) extra.push(`T:${item.item.partialDeliveryId}`);
+        const mainText = item.item.contentDesc || item.item.packaging;
+        const displayText = extra.length > 0 ? `${mainText}\n[${extra.join(' ')}]` : mainText;
+
+        return (
+          <group position={[0, 0, l / 2 + 0.01]}>
+            <Text
+              position={[0, Math.min(w, h) * 0.15, 0]}
+              fontSize={Math.min(w, h) * 0.3}
+              color="white" anchorX="center" anchorY="middle"
+              outlineWidth={0.01} outlineColor="#000000"
+            >
+              {`#${item.loadingOrder}`}
+            </Text>
+            <Text
+              position={[0, -Math.min(w, h) * 0.15, 0]}
+              fontSize={Math.min(w * 0.08, h * 0.12, 0.08)} 
+              color="white" anchorX="center" anchorY="middle"
+              outlineWidth={0.005} outlineColor="#000000"
+              maxWidth={w * 0.9}
+              textAlign="center"
+              overflowWrap="break-word"
+              lineHeight={1.1}
+            >
+              {displayText}
+            </Text>
+          </group>
+        );
+      })()}
     </group>
   );
 }

@@ -110,15 +110,21 @@ export function ContainerViews({ container, items, lang, activeItemId, onItemCli
             color: 'white',
             textAlign: 'center',
             textShadow: '0 1px 2px rgba(0,0,0,0.9)',
-            lineHeight: 1,
+            lineHeight: 1.1,
             display: '-webkit-box',
-            WebkitLineClamp: 3,
+            WebkitLineClamp: 4,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
             wordWrap: 'break-word',
             width: '100%'
           }}>
-            {item.item.contentDesc || item.item.packaging}
+            {(() => {
+              const extra = [];
+              if (item.item.label) extra.push(`L:${item.item.label}`);
+              if (item.item.partialDeliveryId) extra.push(`T:${item.item.partialDeliveryId}`);
+              const mainText = item.item.contentDesc || item.item.packaging;
+              return extra.length > 0 ? `${mainText} [${extra.join(' ')}]` : mainText;
+            })()}
           </span>
         </div>
       </div>
