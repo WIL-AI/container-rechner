@@ -926,6 +926,10 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <footer style={{ textAlign: 'center', padding: '3rem 1rem 1rem', color: 'var(--text-secondary)', fontSize: '0.85rem', opacity: 0.7 }}>
+        &copy; {new Date().getFullYear()} wil-AI
+      </footer>
     </>
   );
 }
