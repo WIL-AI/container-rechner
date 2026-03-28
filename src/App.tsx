@@ -138,15 +138,32 @@ export default function App() {
     const loc = lang === 'de' ? 'de-DE' : 'en-US';
     const dateStr = new Date().toLocaleString(loc);
     
-    const itemsHtml = packlist.map((it: PacklistItem, idx: number) => `
+    const itemsHtml = packlist.map((it: PacklistItem, idx: number) => {
+      const advanced = [];
+      if (it.label) advanced.push((lang === 'de' ? 'Beschriftung: ' : 'Label: ') + it.label);
+      if (it.partialDeliveryId) advanced.push((lang === 'de' ? 'Teillief.: ' : 'Partial Del.: ') + it.partialDeliveryId);
+      if (it.rotatable) advanced.push(lang === 'de' ? 'Rotierbar' : 'Rotatable');
+      if (it.stackableBottom) advanced.push(lang === 'de' ? 'Stapelbar (Unten)' : 'Stackable (Bottom)');
+      if (it.stackableTop) advanced.push(lang === 'de' ? 'Stapelbar (Oben)' : 'Stackable (Top)');
+      if (it.needsCraning) advanced.push(lang === 'de' ? 'Kranverladung' : 'Crane needed');
+
+      const advancedHtml = advanced.length > 0 
+        ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">${advanced.join(' | ')}</div>` 
+        : '';
+
+      return `
       <tr>
-        <td style="border: 1px solid #ddd; padding: 8px;">${idx + 1}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.quantity}x</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.contentDesc || it.packaging}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.length / 10} x ${it.width / 10} x ${it.height / 10} cm</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.weight} kg</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">${idx + 1}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">${it.quantity}x</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">
+          <div style="font-weight: bold;">${it.contentDesc || it.packaging}</div>
+          ${advancedHtml}
+        </td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">${it.length / 10} x ${it.width / 10} x ${it.height / 10} cm</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">${it.weight} kg</td>
       </tr>
-    `).join('');
+      `;
+    }).join('');
 
     printWindow.document.write(`
       <html>
@@ -205,15 +222,32 @@ export default function App() {
     const loc = lang === 'de' ? 'de-DE' : 'en-US';
     const dateStr = new Date().toLocaleString(loc);
     
-    const itemsHtml = pc.items.map((it: PackedItemInfo) => `
+    const itemsHtml = pc.items.map((it: PackedItemInfo) => {
+      const advanced = [];
+      if (it.item.label) advanced.push((lang === 'de' ? 'Beschriftung: ' : 'Label: ') + it.item.label);
+      if (it.item.partialDeliveryId) advanced.push((lang === 'de' ? 'Teillief.: ' : 'Partial Del.: ') + it.item.partialDeliveryId);
+      if (it.item.rotatable) advanced.push(lang === 'de' ? 'Rotierbar' : 'Rotatable');
+      if (it.item.stackableBottom) advanced.push(lang === 'de' ? 'Stapelbar (Unten)' : 'Stackable (Bottom)');
+      if (it.item.stackableTop) advanced.push(lang === 'de' ? 'Stapelbar (Oben)' : 'Stackable (Top)');
+      if (it.item.needsCraning) advanced.push(lang === 'de' ? 'Kranverladung' : 'Crane needed');
+
+      const advancedHtml = advanced.length > 0 
+        ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">${advanced.join(' | ')}</div>` 
+        : '';
+
+      return `
       <tr>
-        <td style="border: 1px solid #ddd; padding: 8px;">#${it.loadingOrder}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.item.contentDesc || it.item.packaging}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.l / 10} x ${it.w / 10} x ${it.h / 10} cm</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.item.weight} kg</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${formatPosition(it.x, it.y, it.z, pc.container.width, pc.container.length)}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">#${it.loadingOrder}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">
+          <div style="font-weight: bold;">${it.item.contentDesc || it.item.packaging}</div>
+          ${advancedHtml}
+        </td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">${it.l / 10} x ${it.w / 10} x ${it.h / 10} cm</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">${it.item.weight} kg</td>
+        <td style="border: 1px solid #ddd; padding: 8px; vertical-align: top;">${formatPosition(it.x, it.y, it.z, pc.container.width, pc.container.length)}</td>
       </tr>
-    `).join('');
+      `;
+    }).join('');
 
     printWindow.document.write(`
       <html>

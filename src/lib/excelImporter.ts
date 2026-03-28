@@ -69,6 +69,12 @@ export async function parseExcelFile(file: File): Promise<PacklistItem[]> {
           // Column 10 (index 9): Stapelbar Oben
           const stackableTop = Boolean(String(row[9] || '').trim());
 
+          // Column 11 (index 10): Beschriftung
+          const label = String(row[10] || '').trim();
+
+          // Column 12 (index 11): Teillieferung / Partial Delivery ID
+          const partialDeliveryId = String(row[11] || '').trim();
+
           // Skip invalid items (at least dimensions and weight should exist to be fully valid, but we allow 0 and user edits them later if needed, or we skip if ALL dims are 0)
           if (length === 0 && width === 0 && height === 0 && weight === 0) continue;
 
@@ -87,8 +93,8 @@ export async function parseExcelFile(file: File): Promise<PacklistItem[]> {
             stackableTop,
             needsCraning: false,
             color: '#3b82f6',
-            label: '',
-            partialDeliveryId: ''
+            label,
+            partialDeliveryId
           });
         }
         
