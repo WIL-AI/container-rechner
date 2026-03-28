@@ -438,7 +438,11 @@ export default function App() {
           <p className="subtitle">{t.appSubtitle}</p>
         </div>
         <div className="header-actions">
-          <button type="button" onClick={() => setShowProjectsModal(true)} className="btn" style={{ background: 'rgba(255,255,255,0.1)', width: 'auto', padding: '0.875rem 1rem' }}>
+          <input type="file" id="excel-upload-header" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} style={{ display: 'none' }} />
+          <label htmlFor="excel-upload-header" className="btn" style={{ background: 'rgba(59,130,246,0.2)', color: 'white', border: '1px solid var(--accent)', padding: '0.5rem 1rem', cursor: 'pointer', margin: 0, width: 'auto' }}>
+            {t.btnImportExcel}
+          </label>
+          <button type="button" onClick={() => setShowProjectsModal(true)} className="btn" style={{ background: 'rgba(255,255,255,0.1)', width: 'auto', padding: '0.5rem 1rem' }}>
             {t.loadProjectsBtn}
           </button>
           
@@ -678,10 +682,6 @@ export default function App() {
                      {t.btnPrintPacklist}
                    </button>
                  )}
-                 <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} style={{ display: 'none' }} />
-                 <label htmlFor="excel-upload" className="btn" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-block', margin: 0, width: 'auto' }}>
-                   {t.btnImportExcel}
-                 </label>
                </div>
             </div>
             {packlist.length === 0 ? (
