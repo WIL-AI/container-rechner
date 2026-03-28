@@ -85,7 +85,13 @@ export default function App() {
     const name = target.name;
     const type = target.type;
     const value = type === 'checkbox' ? target.checked : target.value;
-    setForm(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
+    setForm(prev => {
+      let finalVal: string | number | boolean = type === 'number' ? Number(value) : value;
+      if (type === 'number' && (name === 'length' || name === 'width' || name === 'height')) {
+        finalVal = Math.round(Number(value) * 10);
+      }
+      return { ...prev, [name]: finalVal };
+    });
   };
 
   const submitPacklistItem = (e: React.FormEvent) => {
@@ -118,7 +124,7 @@ export default function App() {
       <tr>
         <td style="border: 1px solid #ddd; padding: 8px;">#${it.loadingOrder}</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${it.item.contentDesc || it.item.packaging}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${it.l} x ${it.w} x ${it.h} mm</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${it.l / 10} x ${it.w / 10} x ${it.h / 10} cm</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${it.item.weight} kg</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${formatPosition(it.x, it.y, it.z, pc.container.width, pc.container.length)}</td>
       </tr>
@@ -156,7 +162,7 @@ export default function App() {
               <p><strong>${t.printEditorLabel}:</strong> ${projectEditor || '-'}</p>
             </div>
             <div>
-              <p><strong>${t.printContainerInfo}:</strong> ${pc.container.name} (${pc.container.length}x${pc.container.width}x${pc.container.height} mm)</p>
+              <p><strong>${t.printContainerInfo}:</strong> ${pc.container.name} (${pc.container.length / 10}x${pc.container.width / 10}x${pc.container.height / 10} cm)</p>
             </div>
           </div>
 
@@ -363,16 +369,16 @@ export default function App() {
 
               <div className="input-group">
                 <label className="input-label">{t.lengthLabel}</label>
-                <input type="number" name="length" value={form.length || ''} onChange={handleInputChange} className="input-field" min="1" required />
+                <input type="number" name="length" value={form.length ? form.length / 10 : ''} onChange={handleInputChange} className="input-field" min="1" step="0.1" required />
               </div>
               <div className="input-group">
                 <label className="input-label">{t.widthLabel}</label>
-                <input type="number" name="width" value={form.width || ''} onChange={handleInputChange} className="input-field" min="1" required />
+                <input type="number" name="width" value={form.width ? form.width / 10 : ''} onChange={handleInputChange} className="input-field" min="1" step="0.1" required />
               </div>
               
               <div className="input-group">
                 <label className="input-label">{t.heightLabel}</label>
-                <input type="number" name="height" value={form.height || ''} onChange={handleInputChange} className="input-field" min="1" required />
+                <input type="number" name="height" value={form.height ? form.height / 10 : ''} onChange={handleInputChange} className="input-field" min="1" step="0.1" required />
               </div>
               <div className="input-group">
                 <label className="input-label">{t.weightLabel}</label>
@@ -502,7 +508,7 @@ export default function App() {
                         <div>
                           <div style={{ fontWeight: 'bold' }}>{item.quantity}x {item.contentDesc || item.packaging}</div>
                           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                            {item.length}x{item.width}x{item.height} mm, {item.weight} kg
+                            {item.length / 10}x{item.width / 10}x{item.height / 10} cm, {item.weight} kg
                             {item.needsCraning && <span style={{ color: 'var(--danger)', marginLeft: '8px' }}>[Kran]</span>}
                           </div>
                         </div>

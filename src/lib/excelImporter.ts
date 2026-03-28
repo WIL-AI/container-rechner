@@ -33,13 +33,16 @@ export async function parseExcelFile(file: File): Promise<PacklistItem[]> {
           const contentDesc = String(row[1] || 'Importiertes Stück').trim();
           
           // Column 3 (index 2): Länge
-          const length = Number(row[2]) || 0;
+          const rawLen = String(row[2] || '0').replace(',', '.');
+          const length = Math.round((Number(rawLen) || 0) * 10);
           
           // Column 4 (index 3): Breite
-          const width = Number(row[3]) || 0;
+          const rawWid = String(row[3] || '0').replace(',', '.');
+          const width = Math.round((Number(rawWid) || 0) * 10);
           
           // Column 5 (index 4): Höhe
-          const height = Number(row[4]) || 0;
+          const rawHei = String(row[4] || '0').replace(',', '.');
+          const height = Math.round((Number(rawHei) || 0) * 10);
           
           // Column 6 (index 5): Verpackung
           const rawPackaging = String(row[5] || '').trim();
