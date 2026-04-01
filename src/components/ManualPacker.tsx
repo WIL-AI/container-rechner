@@ -24,6 +24,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
   const [pointerOffset, setPointerOffset] = useState({ x: 0, z: 0 }); // mm offset from item origin
   const [ghostPos, setGhostPos] = useState<{ x: number, z: number, y: number } | null>(null);
   const [draggedRotation, setDraggedRotation] = useState(false); // whether current drag is rotated
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+  const [isInvalidGhost, setIsInvalidGhost] = useState(false);
 
   const inventory = useMemo(() => {
     const list: PacklistItem[] = [];
@@ -81,6 +83,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     setDraggedIndices(stackIndices);
     setIsPointerDragging(true);
     setDraggedRotation(false);
+    setSelectedIndices(stackIndices);
     
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -107,6 +110,14 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     const otherItems = packedItems.filter((_, i) => !draggedIndices.includes(i));
     const { mmX, mmZ, targetY } = findSafePosition(curW, curL, baseItem.h, tx, tz, otherItems);
     
+    // Check height for all items in stack if they were moved
+    let exceedsHeight = false;
+    const dy = targetY - baseItem.y;
+    draggedIndices.forEach(idx => {
+        if (packedItems[idx].y + dy + packedItems[idx].h > container.height) exceedsHeight = true;
+    });
+
+    setIsInvalidGhost(exceedsHeight);
     setGhostPos({ x: mmX, z: mmZ, y: targetY });
   };
 
@@ -121,6 +132,22 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     const indices = draggedIndices;
     const gPos = ghostPos;
     const isRot = draggedRotation;
+
+    // Height check
+    const baseItemOrig = packedItems[indices[0]];
+    const dy = gPos.y - baseItemOrig.y;
+    let exceeds = false;
+    indices.forEach(idx => {
+        if (packedItems[idx].y + dy + packedItems[idx].h > container.height) exceeds = true;
+    });
+
+    if (exceeds) {
+        alert(lang === 'de' ? 'Maximale Höhe überschritten!' : 'Maximum height exceeded!');
+        setIsPointerDragging(false);
+        setDraggedIndices([]);
+        setGhostPos(null);
+        return;
+    }
 
     setPackedItems(prev => {
         const next = [...prev];
@@ -157,6 +184,41 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         e.preventDefault();
         setDraggedRotation(prev => !prev);
     }
+  };
+
+  const handleRotateSelected = () => {
+    if (selectedIndices.length === 0) return;
+
+    setPackedItems(prev => {
+        const next = [...prev];
+        const baseIndex = selectedIndices[0];
+        const baseItem = next[baseIndex];
+
+        // Check if rotation fits in height
+        const otherItems = next.filter((_, i) => !selectedIndices.includes(i));
+        const { targetY } = findSafePosition(baseItem.l, baseItem.w, baseItem.h, baseItem.x, baseItem.z, otherItems);
+        
+        const dy = targetY - baseItem.y;
+        let exceeds = false;
+        selectedIndices.forEach(idx => {
+            if (next[idx].y + dy + next[idx].h > container.height) exceeds = true;
+        });
+
+        if (exceeds) {
+            alert(lang === 'de' ? 'Rotation nicht möglich: Höhe überschritten!' : 'Rotation not possible: Height exceeded!');
+            return prev;
+        }
+
+        const deltaY = targetY - baseItem.y;
+        selectedIndices.forEach(idx => {
+            let item = { ...next[idx] };
+            [item.w, item.l] = [item.l, item.w];
+            item.y += deltaY;
+            next[idx] = item;
+        });
+
+        return next;
+    });
   };
 
   const handleDropOnFloor = (e: React.DragEvent) => {
@@ -319,6 +381,37 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                </button>
            </div>
 
+           {selectedIndices.length > 0 && (
+             <div className="animate-in" style={{ 
+               display: 'flex', 
+               alignItems: 'center', 
+               gap: '1rem', 
+               padding: '0.75rem', 
+               background: 'rgba(0,218,243,0.1)', 
+               borderRadius: '8px', 
+               marginBottom: '1rem',
+               border: '1px solid var(--accent)'
+             }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 'bold' }}>
+                  {lang === 'de' ? 'Stapel ausgewählt:' : 'Stack selected:'} #{packedItems[selectedIndices[0]].loadingOrder}
+                </span>
+                <button 
+                  className="btn" 
+                  onClick={handleRotateSelected}
+                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--accent)', color: 'var(--bg-deep)' }}
+                >
+                  🔄 90° {lang === 'de' ? 'Drehen' : 'Rotate'}
+                </button>
+                <button 
+                  className="btn" 
+                  onClick={() => setSelectedIndices([])}
+                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.1)' }}
+                >
+                  {lang === 'de' ? 'Abbrechen' : 'Cancel'}
+                </button>
+             </div>
+           )}
+
            {/* Realistic Scaling Wrapper */}
            <div 
              tabIndex={0} 
@@ -353,6 +446,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                       const opacity = 0.6 + Math.min(0.4, pi.y / 1500);
                       
                       const isDragging = draggedIndices.includes(idx);
+                      const isSelected = selectedIndices.includes(idx);
                       
                       return (
                           <div key={`${pi.item.id}-${pi.x}-${pi.y}-${pi.z}`} 
@@ -365,7 +459,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                                   height: `${hPct}%`,
                                   backgroundColor: pi.item.color || 'var(--accent)',
                                   opacity: isDragging ? 0.2 : opacity,
-                                  border: isDragging ? '1px dashed var(--accent)' : '1px solid rgba(255,255,255,0.4)',
+                                  border: isSelected ? '2px solid #fff' : (isDragging ? '1px dashed var(--accent)' : '1px solid rgba(255,255,255,0.4)'),
+                                  boxShadow: isSelected ? '0 0 15px #fff' : '0 4px 8px rgba(0,0,0,0.5)',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -373,7 +468,6 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                                   fontWeight: 'bold',
                                   color: 'white',
                                   cursor: 'grab',
-                                  boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
                                   transition: 'transform 0.1s',
                                   zIndex: Math.floor(pi.y / 10) + 1,
                                   userSelect: 'none',
@@ -423,8 +517,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                           top: `${(ghostPos.z / container.length) * 100}%`,
                           width: `${((draggedRotation ? packedItems[draggedIndices[0]].l : packedItems[draggedIndices[0]].w) / container.width) * 100}%`,
                           height: `${((draggedRotation ? packedItems[draggedIndices[0]].w : packedItems[draggedIndices[0]].l) / container.length) * 100}%`,
-                          background: 'rgba(0, 218, 243, 0.4)',
-                          border: '2px solid var(--accent)',
+                          background: isInvalidGhost ? 'rgba(255, 68, 68, 0.4)' : 'rgba(0, 218, 243, 0.4)',
+                          border: `2px solid ${isInvalidGhost ? 'var(--danger)' : 'var(--accent)'}`,
                           zIndex: 2000,
                           pointerEvents: 'none',
                           display: 'flex',
@@ -433,9 +527,9 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                           fontSize: '0.7rem',
                           color: 'white',
                           fontWeight: 'bold',
-                          boxShadow: '0 0 15px var(--accent)'
+                          boxShadow: `0 0 15px ${isInvalidGhost ? 'var(--danger)' : 'var(--accent)'}`
                       }}>
-                        {lang === 'de' ? 'Verschieben...' : 'Moving...'}
+                        {isInvalidGhost ? (lang === 'de' ? 'Zu hoch!' : 'Too high!') : (lang === 'de' ? 'Verschieben...' : 'Moving...')}
                       </div>
                   )}
               </div>
