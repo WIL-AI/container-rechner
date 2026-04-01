@@ -542,7 +542,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
               {selectedIndices.length > 0 && (
                 <div className="animate-in" style={{ 
                     position: 'absolute',
-                    bottom: '1.5rem',
+                    bottom: '3rem',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     width: '260px',
