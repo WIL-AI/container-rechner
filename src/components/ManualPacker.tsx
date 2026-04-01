@@ -215,10 +215,6 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         const deltaY = targetY - baseItem.y;
         let exceeds = false;
         selectedIndices.forEach(idx => {
-            let itemH = next[idx].h;
-            if (type === 'flipL' && idx === baseIndex) itemH = next[idx].l; // Simplistic: only base item flips dimensions for now in stack
-            if (type === 'flipW' && idx === baseIndex) itemH = next[idx].w;
-            // Actually, for a stack to be valid after flip, all items must flip?
             // Usually flipping is for single items. We'll flip the whole stack's dimensions.
             let nextH = next[idx].h;
             if (type === 'flipL') nextH = next[idx].l;
@@ -406,64 +402,11 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                </button>
            </div>
 
-           {selectedIndices.length > 0 && (
-             <div className="animate-in" style={{ 
-               display: 'flex', 
-               alignItems: 'center', 
-               gap: '1rem', 
-               padding: '0.75rem', 
-               background: 'rgba(0,218,243,0.1)', 
-               borderRadius: '8px', 
-               marginBottom: '1rem',
-               border: '1px solid var(--accent)'
-             }}>
-                <span style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 'bold' }}>
-                  {lang === 'de' ? 'Stapel ausgewählt:' : 'Stack selected:'} #{packedItems[selectedIndices[0]].loadingOrder}
-                </span>
-                <button 
-                  className="btn" 
-                  onClick={() => handleRotate3D('horizontal')}
-                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--accent)', color: 'var(--bg-deep)' }}
-                  title="90° Ebene [Space]"
-                >
-                  🔄 {lang === 'de' ? 'Ebene' : 'Plano'}
-                </button>
-                <button 
-                  className="btn" 
-                  onClick={() => handleRotate3D('flipL')}
-                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--accent)', color: 'var(--bg-deep)' }}
-                  title="Längs kippen [X]"
-                >
-                  📐 {lang === 'de' ? 'Kippen Längs' : 'Flip Long'}
-                </button>
-                <button 
-                  className="btn" 
-                  onClick={() => handleRotate3D('flipW')}
-                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--accent)', color: 'var(--bg-deep)' }}
-                  title="Quer kippen [Y]"
-                >
-                  📐 {lang === 'de' ? 'Kippen Quer' : 'Flip Short'}
-                </button>
-                {packedItems[selectedIndices[0]]?.item.rotatable === false && (
-                    <span style={{ fontSize: '0.8rem', color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        ⚠️ {lang === 'de' ? 'Nicht rotierbar' : 'Not rotatable'}
-                    </span>
-                )}
-                <button 
-                  className="btn" 
-                  onClick={() => setSelectedIndices([])}
-                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.1)', marginLeft: 'auto' }}
-                >
-                  {lang === 'de' ? 'Abbrechen' : 'Cancel'}
-                </button>
-             </div>
-           )}
-
            {/* Realistic Scaling Wrapper */}
            <div 
              tabIndex={0} 
              onKeyDown={handleKeyDown}
-             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', padding: '1rem', overflow: 'hidden', outline: 'none' }}
+             style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', padding: '1rem', overflow: 'hidden', outline: 'none' }}
            >
               <div 
                 ref={floorRef}
@@ -580,6 +523,66 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                       </div>
                   )}
               </div>
+
+              {/* ROTATION TOOLBAR BELOW GRID */}
+              {selectedIndices.length > 0 && (
+                <div className="animate-in" style={{ 
+                    marginTop: '1.5rem',
+                    width: '100%',
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '1rem', 
+                    padding: '0.75rem 1rem', 
+                    background: 'rgba(0,218,243,0.1)', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--accent)',
+                    boxShadow: '0 0 15px rgba(0,218,243,0.2)'
+                }}>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                    {lang === 'de' ? 'Objekt' : 'Item'} #{packedItems[selectedIndices[0]].loadingOrder}:
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button 
+                            className="btn" 
+                            onClick={() => handleRotate3D('horizontal')}
+                            style={{ width: 'auto', padding: '0.4rem 0.8rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.85rem' }}
+                            title="90° Ebene [Space]"
+                        >
+                            🔄 {lang === 'de' ? 'Ebene' : 'Floor'}
+                        </button>
+                        <button 
+                            className="btn" 
+                            onClick={() => handleRotate3D('flipL')}
+                            style={{ width: 'auto', padding: '0.4rem 0.8rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.85rem' }}
+                            title="Längs kippen [X]"
+                        >
+                            📐 {lang === 'de' ? 'Längs' : 'Long'}
+                        </button>
+                        <button 
+                            className="btn" 
+                            onClick={() => handleRotate3D('flipW')}
+                            style={{ width: 'auto', padding: '0.4rem 0.8rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.85rem' }}
+                            title="Quer kippen [Y]"
+                        >
+                            📐 {lang === 'de' ? 'Quer' : 'Short'}
+                        </button>
+                    </div>
+                    
+                    {packedItems[selectedIndices[0]]?.item.rotatable === false && (
+                        <span style={{ fontSize: '0.75rem', color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}>
+                            ⚠️ {lang === 'de' ? 'Nicht rotierbar' : 'Not rotatable'}
+                        </span>
+                    )}
+                    
+                    <button 
+                    className="btn" 
+                    onClick={() => setSelectedIndices([])}
+                    style={{ width: 'auto', padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.1)', marginLeft: 'auto', fontSize: '0.85rem' }}
+                    >
+                    ✕
+                    </button>
+                </div>
+              )}
            </div>
         </div>
 
