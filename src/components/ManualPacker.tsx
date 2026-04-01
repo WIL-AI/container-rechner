@@ -352,7 +352,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 1.5fr', gap: '1.5rem' }}>
         
         {/* LEFT: INVENTORY */}
-        <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', height: '82vh' }}>
+        <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', height: '92vh' }}>
            <h3 style={{ marginTop: 0 }}>Inventar ({inventory.length})</h3>
            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.5rem' }}>
               {inventory.map(item => (
@@ -382,7 +382,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         </div>
 
         {/* CENTER: 2D FLOOR GRID */}
-        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '82vh' }}>
+        <div className="glass-panel" style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', height: '92vh' }}>
            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                <select className="input-field" style={{ width: '220px', padding: '0.5rem' }} value={container.id} onChange={e => {
                    const c = CONTAINERS.find(x => x.id === e.target.value);
@@ -413,6 +413,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                 style={{
                   width: 'calc(100% - 40px)',
                   height: '100%',
+                  maxHeight: 'calc(92vh - 250px)', // Ensure room for headers and toolbar
                   aspectRatio: `${container.width} / ${container.length}`,
                   background: 'linear-gradient(rgba(0,218,243,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,218,243,0.05) 1px, transparent 1px)',
                   backgroundSize: '30px 30px',
@@ -424,8 +425,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                 }}
               >
                   {/* WALL LABELS */}
-                  <div style={{ position: 'absolute', top: '-2rem', width: '100%', textAlign: 'center', fontSize: '0.85rem', color: 'var(--accent)', opacity: 1, fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>FRONT (Eingang / Rampe)</div>
-                  <div style={{ position: 'absolute', bottom: '-2rem', width: '100%', textAlign: 'center', fontSize: '0.85rem', color: 'var(--accent)', opacity: 1, fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>BACK (Rückwand / Boden)</div>
+                  <div style={{ position: 'absolute', top: '-1.8rem', width: '100%', textAlign: 'center', fontSize: '0.8rem', color: 'var(--accent)', opacity: 1, fontWeight: 'bold' }}>FRONT (Eingang)</div>
+                  <div style={{ position: 'absolute', bottom: '-1.8rem', width: '100%', textAlign: 'center', fontSize: '0.8rem', color: 'var(--accent)', opacity: 1, fontWeight: 'bold' }}>BACK (Rückwand)</div>
 
                   {packedItems.map((pi, idx) => {
                       // Front-Top Vertical View:
@@ -526,79 +527,58 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                   )}
               </div>
 
-              {/* ROTATION TOOLBAR BELOW GRID (Vertical Stack) */}
+              {/* ROTATION TOOLBAR BELOW GRID (New Compact Vertical Stack) */}
               {selectedIndices.length > 0 && (
                 <div className="animate-in" style={{ 
-                    marginTop: '1.5rem',
+                    marginTop: '0.75rem',
                     width: '100%',
+                    maxWidth: '260px',
                     display: 'flex', 
                     flexDirection: 'column',
-                    gap: '0.75rem', 
-                    padding: '1rem', 
-                    background: 'rgba(0,218,243,0.1)', 
-                    borderRadius: '8px', 
+                    gap: '0.4rem', 
+                    padding: '0.6rem', 
+                    background: 'rgba(0,218,243,0.12)', 
+                    borderRadius: '6px', 
                     border: '1px solid var(--accent)',
-                    boxShadow: '0 0 15px rgba(0,218,243,0.2)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '1rem', color: 'var(--accent)', fontWeight: 'bold' }}>
-                          Objekt #{packedItems[selectedIndices[0]].loadingOrder} {lang === 'de' ? 'rotieren' : 'rotate'}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold' }}>
+                          #{packedItems[selectedIndices[0]].loadingOrder} {lang === 'de' ? 'Richtung ändern' : 'Change Direction'}
                         </span>
                         <button 
-                          className="btn" 
                           onClick={() => setSelectedIndices([])}
-                          style={{ width: '32px', height: '32px', padding: 0, background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}
-                          title={lang === 'de' ? 'Abbrechen' : 'Cancel'}
+                          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '0.8rem', padding: '0 2px' }}
                         >
                           ✕
                         </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
-                        <button 
-                            className="btn" 
-                            onClick={() => handleRotate3D('horizontal')}
-                            style={{ 
-                              justifyContent: 'flex-start',
-                              padding: '0.75rem 1rem', 
-                              background: 'var(--accent)', 
-                              color: 'var(--bg-deep)',
-                              textAlign: 'left'
-                            }}
-                        >
-                            🔄 {lang === 'de' ? 'Ebene drehen (Länge ↔ Breite)' : 'Rotate horizontal (L ↔ W)'}
-                        </button>
-                        <button 
-                            className="btn" 
-                            onClick={() => handleRotate3D('flipL')}
-                            style={{ 
-                              justifyContent: 'flex-start',
-                              padding: '0.75rem 1rem', 
-                              background: 'var(--accent)', 
-                              color: 'var(--bg-deep)',
-                              textAlign: 'left'
-                            }}
-                        >
-                            📐 {lang === 'de' ? 'Längs kippen (Länge ↔ Höhe)' : 'Flip long (L ↔ H)'}
-                        </button>
-                        <button 
-                            className="btn" 
-                            onClick={() => handleRotate3D('flipW')}
-                            style={{ 
-                              justifyContent: 'flex-start',
-                              padding: '0.75rem 1rem', 
-                              background: 'var(--accent)', 
-                              color: 'var(--bg-deep)',
-                              textAlign: 'left'
-                            }}
-                        >
-                            📐 {lang === 'de' ? 'Quer kippen (Breite ↔ Höhe)' : 'Flip short (W ↔ H)'}
-                        </button>
-                    </div>
+                    <button 
+                        className="btn" 
+                        onClick={() => handleRotate3D('horizontal')}
+                        style={{ justifyContent: 'flex-start', padding: '0.4rem 0.6rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem', fontWeight: 'normal' }}
+                    >
+                        🔄 {lang === 'de' ? 'Ebene (L ↔ B)' : 'Floor (L ↔ W)'}
+                    </button>
+                    <button 
+                        className="btn" 
+                        onClick={() => handleRotate3D('flipL')}
+                        style={{ justifyContent: 'flex-start', padding: '0.4rem 0.6rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem', fontWeight: 'normal' }}
+                    >
+                        📐 {lang === 'de' ? 'Längs (L ↔ H)' : 'Long (L ↔ H)'}
+                    </button>
+                    <button 
+                        className="btn" 
+                        onClick={() => handleRotate3D('flipW')}
+                        style={{ justifyContent: 'flex-start', padding: '0.4rem 0.6rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem', fontWeight: 'normal' }}
+                    >
+                        📐 {lang === 'de' ? 'Quer (B ↔ H)' : 'Short (W ↔ H)'}
+                    </button>
                     
                     {packedItems[selectedIndices[0]]?.item.rotatable === false && (
-                        <div style={{ fontSize: '0.8rem', color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                            ⚠️ {lang === 'de' ? 'Hinweis: Packstück laut Stammdaten nicht rotierbar.' : 'Note: Item not rotatable according to master data.'}
+                        <div style={{ fontSize: '0.65rem', color: '#ffcc00', marginTop: '0.2rem' }}>
+                            ⚠️ {lang === 'de' ? 'Nicht rotierbar' : 'Not rotatable'}
                         </div>
                     )}
                 </div>
@@ -607,7 +587,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         </div>
 
         {/* RIGHT: 3D PREVIEW */}
-        <div className="glass-panel" style={{ padding: 0, height: '82vh', overflow: 'hidden', position: 'relative' }}>
+        <div className="glass-panel" style={{ padding: 0, height: '92vh', overflow: 'hidden', position: 'relative' }}>
             <div style={{ position: 'absolute', bottom: '1.25rem', right: '1.25rem', zIndex: 10, background: 'rgba(0,0,0,0.6)', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--accent)', border: '1px solid var(--accent)' }}>
                 3D Live Update
             </div>
