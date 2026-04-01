@@ -538,70 +538,72 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                         {isInvalidGhost ? (lang === 'de' ? 'Zu hoch!' : 'Too high!') : (lang === 'de' ? 'Verschieben...' : 'Moving...')}
                       </div>
                   )}
-                {/* FLOATING ROTATION CONSOLE (AeroDeck V2.11) */}
-              {selectedIndices.length > 0 && (
-                <div className="animate-in" style={{ 
-                    position: 'absolute',
-                    bottom: '3rem',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '260px',
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    gap: '0.4rem', 
-                    padding: '0.75rem', 
-                    background: 'rgba(9, 28, 53, 0.85)', 
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '12px', 
-                    border: '1px solid var(--accent)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-                    zIndex: 5000,
-                    pointerEvents: 'auto'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold' }}>
-                          #{packedItems[selectedIndices[0]].loadingOrder} {lang === 'de' ? 'Ausrichtung' : 'Align'}
-                        </span>
-                        <button 
-                          onClick={() => setSelectedIndices([])}
-                          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px' }}
-                        >
-                          ✕
-                        </button>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <button 
-                            className="btn" 
-                            onClick={() => handleRotate3D('horizontal')}
-                            style={{ justifyContent: 'flex-start', padding: '0.5rem 0.75rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem' }}
-                        >
-                            🔄 {lang === 'de' ? 'Ebene drehen' : 'Rotate Floor'}
-                        </button>
-                        <button 
-                            className="btn" 
-                            onClick={() => handleRotate3D('flipL')}
-                            style={{ justifyContent: 'flex-start', padding: '0.5rem 0.75rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem' }}
-                        >
-                            📐 {lang === 'de' ? 'Längs kippen' : 'Flip Long'}
-                        </button>
-                        <button 
-                            className="btn" 
-                            onClick={() => handleRotate3D('flipW')}
-                            style={{ justifyContent: 'flex-start', padding: '0.5rem 0.75rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem' }}
-                        >
-                            📐 {lang === 'de' ? 'Quer kippen' : 'Flip Short'}
-                        </button>
-                    </div>
-                    
-                    {packedItems[selectedIndices[0]]?.item.rotatable === false && (
-                        <div style={{ fontSize: '0.6rem', color: '#ffcc00', marginTop: '0.2rem', textAlign: 'center' }}>
-                        </div>
-                    )}
-                </div>
-              )}
             </div>
           </div>
+
+          {/* FLOATING ROTATION CONSOLE (AeroDeck V2.11) - Moved outside grid for proper centering */}
+          {selectedIndices.length > 0 && (
+            <div className="animate-in" style={{ 
+                position: 'absolute',
+                bottom: '3rem',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '260px',
+                display: 'flex', 
+                flexDirection: 'column',
+                gap: '0.4rem', 
+                padding: '0.75rem', 
+                background: 'rgba(9, 28, 53, 0.9)', 
+                backdropFilter: 'blur(12px)',
+                borderRadius: '12px', 
+                border: '1px solid var(--accent)',
+                boxShadow: '0 12px 48px rgba(0,0,0,0.7)',
+                zIndex: 10000,
+                pointerEvents: 'auto'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold' }}>
+                      #{packedItems[selectedIndices[0]].loadingOrder} {lang === 'de' ? 'Ausrichtung' : 'Align'}
+                    </span>
+                    <button 
+                      onClick={() => setSelectedIndices([])}
+                      style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px' }}
+                    >
+                      ✕
+                    </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <button 
+                        className="btn" 
+                        onClick={() => handleRotate3D('horizontal')}
+                        style={{ justifyContent: 'flex-start', padding: '0.5rem 0.75rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem' }}
+                    >
+                        🔄 {lang === 'de' ? 'Ebene drehen' : 'Rotate Floor'}
+                    </button>
+                    <button 
+                        className="btn" 
+                        onClick={() => handleRotate3D('flipL')}
+                        style={{ justifyContent: 'flex-start', padding: '0.5rem 0.75rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem' }}
+                    >
+                        📐 {lang === 'de' ? 'Längs kippen' : 'Flip Long'}
+                    </button>
+                    <button 
+                        className="btn" 
+                        onClick={() => handleRotate3D('flipW')}
+                        style={{ justifyContent: 'flex-start', padding: '0.5rem 0.75rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.75rem' }}
+                    >
+                        📐 {lang === 'de' ? 'Quer kippen' : 'Flip Short'}
+                    </button>
+                </div>
+                
+                {packedItems[selectedIndices[0]]?.item.rotatable === false && (
+                    <div style={{ fontSize: '0.6rem', color: '#ffcc00', marginTop: '0.5rem', textAlign: 'center' }}>
+                       ⚠️ {lang === 'de' ? 'Nicht rotierbar' : 'Not rotatable'}
+                    </div>
+                )}
+            </div>
+          )}
         </div>
 
         {/* RIGHT: 3D PREVIEW */}
