@@ -68,16 +68,16 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     findStack(index);
 
     // Calculate pointer offset in MM 
-    // In horizontal view: 
-    // e.clientX is Z (length)
-    // e.clientY is X (width)
+    // In Front-Top Vertical view: 
+    // e.clientX is X (width)
+    // e.clientY is Z (length, but inverted so 0 is bottom)
     if (!floorRef.current) return;
     const rect = floorRef.current.getBoundingClientRect();
-    const scaleZ = container.length / rect.width;
-    const scaleX = container.width / rect.height;
+    const scaleX = container.width / rect.width;
+    const scaleZ = container.length / rect.height;
     
-    const clickZmm = (e.clientX - rect.left) * scaleZ;
-    const clickXmm = (e.clientY - rect.top) * scaleX;
+    const clickXmm = (e.clientX - rect.left) * scaleX;
+    const clickZmm = container.length - (e.clientY - rect.top) * scaleZ;
 
     setPointerOffset({ 
         x: clickXmm - baseItem.x, 
@@ -95,11 +95,11 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     if (!isPointerDragging || draggedIndices.length === 0 || !floorRef.current) return;
 
     const rect = floorRef.current.getBoundingClientRect();
-    const scaleZ = container.length / rect.width;
-    const scaleX = container.width / rect.height;
+    const scaleX = container.width / rect.width;
+    const scaleZ = container.length / rect.height;
     
-    const currentZmm = (e.clientX - rect.left) * scaleZ;
-    const currentXmm = (e.clientY - rect.top) * scaleX;
+    const currentXmm = (e.clientX - rect.left) * scaleX;
+    const currentZmm = container.length - (e.clientY - rect.top) * scaleZ;
 
     const baseItem = packedItems[draggedIndices[0]];
     // Target is current - initial offset
@@ -258,11 +258,11 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     const dropX = e.clientX - rect.left;
     const dropY = e.clientY - rect.top;
 
-    const scaleZ = container.length / rect.width;
-    const scaleX = container.width / rect.height;
+    const scaleX = container.width / rect.width;
+    const scaleZ = container.length / rect.height;
 
-    let targetZ = Math.round(dropX * scaleZ);
-    let targetX = Math.round(dropY * scaleX);
+    let targetX = Math.round(dropX * scaleX);
+    let targetZ = Math.round(container.length - (dropY * scaleZ));
 
     if (data.type === 'inventory') {
         addItemToContainer(data.item, targetX, targetZ);
@@ -411,9 +411,9 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 style={{
-                  width: '100%',
+                  width: 'calc(100% - 40px)',
                   height: '100%',
-                  aspectRatio: `${container.length} / ${container.width}`,
+                  aspectRatio: `${container.width} / ${container.length}`,
                   background: 'linear-gradient(rgba(0,218,243,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,218,243,0.05) 1px, transparent 1px)',
                   backgroundSize: '30px 30px',
                   border: '2px solid rgba(0,218,243,0.3)',
@@ -423,11 +423,18 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                   touchAction: 'none'
                 }}
               >
+                  {/* WALL LABELS */}
+                  <div style={{ position: 'absolute', top: '-1.5rem', width: '100%', textAlign: 'center', fontSize: '0.7rem', color: 'var(--accent)', opacity: 0.6 }}>FRONT (Eingang)</div>
+                  <div style={{ position: 'absolute', bottom: '-1.5rem', width: '100%', textAlign: 'center', fontSize: '0.7rem', color: 'var(--accent)', opacity: 0.6 }}>BACK (Rückwand)</div>
+
                   {packedItems.map((pi, idx) => {
-                      const leftPct = (pi.z / container.length) * 100;
-                      const topPct = (pi.x / container.width) * 100;
-                      const itemWPct = (pi.l / container.length) * 100;
-                      const itemHPct = (pi.w / container.width) * 100;
+                      // Front-Top Vertical View:
+                      // Left = X (width), Top = Length - Z (depth)
+                      const leftPct = (pi.x / container.width) * 100;
+                      // topPct maps z=0 to bottom. top 0 is z=container.length
+                      const topPct = ((container.length - pi.z - pi.l) / container.length) * 100;
+                      const itemWPct = (pi.w / container.width) * 100;
+                      const itemHPct = (pi.l / container.length) * 100;
                       const opacity = 0.6 + Math.min(0.4, pi.y / 1500);
                       
                       const isDragging = draggedIndices.includes(idx);
@@ -498,10 +505,10 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                   {isPointerDragging && ghostPos && draggedIndices.length > 0 && (
                       <div style={{
                           position: 'absolute',
-                          left: `${(ghostPos.z / container.length) * 100}%`,
-                          top: `${(ghostPos.x / container.width) * 100}%`,
-                          width: `${((draggedRotation ? packedItems[draggedIndices[0]].w : packedItems[draggedIndices[0]].l) / container.length) * 100}%`,
-                          height: `${((draggedRotation ? packedItems[draggedIndices[0]].l : packedItems[draggedIndices[0]].w) / container.width) * 100}%`,
+                          left: `${(ghostPos.x / container.width) * 100}%`,
+                          top: `${((container.length - ghostPos.z - (draggedRotation ? packedItems[draggedIndices[0]].w : packedItems[draggedIndices[0]].l)) / container.length) * 100}%`,
+                          width: `${((draggedRotation ? packedItems[draggedIndices[0]].l : packedItems[draggedIndices[0]].w) / container.width) * 100}%`,
+                          height: `${((draggedRotation ? packedItems[draggedIndices[0]].w : packedItems[draggedIndices[0]].l) / container.length) * 100}%`,
                           background: isInvalidGhost ? 'rgba(255, 68, 68, 0.4)' : 'rgba(0, 218, 243, 0.4)',
                           border: `2px solid ${isInvalidGhost ? 'var(--danger)' : 'var(--accent)'}`,
                           zIndex: 2000,
