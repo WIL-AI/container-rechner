@@ -31,16 +31,16 @@ function ContainerWireframe({ container }: { container: ContainerType }) {
   return (
     <group>
       {edges.map((pts, i) => (
-        <Line key={i} points={pts} color="#4a90d9" lineWidth={1.5} opacity={0.6} transparent />
+        <Line key={i} points={pts} color="#00daf3" lineWidth={2} opacity={0.6} transparent />
       ))}
       <mesh position={[cW/2, 0.001, cL/2]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[cW, cL]} />
-        <meshStandardMaterial color="#1a2744" transparent opacity={0.5} side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#01132c" transparent opacity={0.8} side={THREE.DoubleSide} />
       </mesh>
-      <Text position={[cW/2, -0.18, 0]} fontSize={0.18} color="#4a90d9" anchorX="center" anchorY="top" fontWeight="bold">
+      <Text position={[cW/2, -0.18, 0]} fontSize={0.18} color="#00daf3" anchorX="center" anchorY="top" fontWeight="bold">
         ← STIRNWAND / BACK →
       </Text>
-      <Text position={[cW/2, -0.18, cL]} fontSize={0.14} color="#ef4444" anchorX="center" anchorY="top">
+      <Text position={[cW/2, -0.18, cL]} fontSize={0.14} color="#ff0055" anchorX="center" anchorY="top">
         TÜR / DOOR
       </Text>
     </group>
@@ -67,14 +67,15 @@ function PackedBox({ item, isActive, dimmed, onClick }: {
         <boxGeometry args={[w, h, l]} />
         <meshStandardMaterial
           color={color} transparent
-          opacity={dimmed ? 0.15 : (isActive ? 1 : 0.85)}
-          emissive={isActive ? color : '#000000'}
-          emissiveIntensity={isActive ? 0.3 : 0}
+          opacity={dimmed ? 0.05 : (isActive ? 0.8 : 0.3)}
+          emissive={isActive ? color : '#00daf3'}
+          emissiveIntensity={isActive ? 0.5 : 0.1}
+          depthWrite={false}
         />
       </mesh>
       <mesh>
         <boxGeometry args={[w, h, l]} />
-        <meshBasicMaterial color="#ffffff" wireframe transparent opacity={dimmed ? 0.05 : 0.3} />
+        <meshBasicMaterial color={isActive ? "#ffffff" : color} wireframe transparent opacity={dimmed ? 0.02 : (isActive ? 0.9 : 0.6)} />
       </mesh>
       {!dimmed && (() => {
         const extra = [];

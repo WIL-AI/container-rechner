@@ -52,7 +52,7 @@ export interface PackingPlan {
 
 
 
-function findBestContainerForItems(items: PacklistItem[], containerSelection: string, groupByDescription: boolean): ContainerType {
+function findBestContainerForItems(items: PacklistItem[], containerSelection: string, groupByDescription: boolean, aisleWidthMm: number): ContainerType {
   const needsCraning = items.some(i => i.needsCraning);
   const needsHC = items.some(i => i.height > 2390 || (!i.rotatable && i.width > 2390 && i.length > 2390));
 
@@ -86,7 +86,7 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   let bestScore = -1;
 
   for (const c of candidates) {
-    const { packedItems, usedVolume } = packIntoContainer3D(items, c, groupByDescription);
+    const { packedItems, usedVolume } = packIntoContainer3D(items, c, groupByDescription, aisleWidthMm);
     
     // Calculate a score:
     // Base score is the number of packed items (favoring greedy filling).
@@ -121,7 +121,7 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   return bestContainer;
 }
 
-function packIntoContainer3D(items: PacklistItem[], container: ContainerType, groupByDescription: boolean = false) {
+function packIntoContainer3D(items: PacklistItem[], container: ContainerType, groupByDescription: boolean = false, aisleWidthMm: number = 0) {
    let usedVolume = 0;
    let usedWeight = 0;
    const packedItems: PackedItemInfo[] = [];
@@ -233,7 +233,8 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType, gr
         }
 
         // C. Width check (move to next slice)
-        if (currentX + w > container.width) {
+        const usableW = Math.max(0, container.width - aisleWidthMm);
+        if (currentX + w > usableW) {
            currentX = 0;
            currentY = 0;
            currentZ += sliceMaxL;
@@ -302,7 +303,8 @@ export function calculateHeterogeneousPacking(
   packlist: PacklistItem[],
   containerSelection: string,
   customFleet: CustomFleetItem[] = [],
-  groupByDescription: boolean = false
+  groupByDescription: boolean = false,
+  aisleWidthMm: number = 0
 ): PackingPlan {
   const plan: PackingPlan = { packedContainers: [], unpackedItems: [] };
   
@@ -328,10 +330,10 @@ export function calculateHeterogeneousPacking(
          if (fleetSequence.length === 0) break; // Fleet is exhausted
          container = fleetSequence.shift()!;
      } else {
-         container = findBestContainerForItems(currentItems, containerSelection, groupByDescription);
+         container = findBestContainerForItems(currentItems, containerSelection, groupByDescription, aisleWidthMm);
      }
 
-     const { packedItems, remainingItems, usedVolume, usedWeight } = packIntoContainer3D(currentItems, container, groupByDescription);
+     const { packedItems, remainingItems, usedVolume, usedWeight } = packIntoContainer3D(currentItems, container, groupByDescription, aisleWidthMm);
 
      if (packedItems.length === 0) {
         if (containerSelection === 'fleet') {

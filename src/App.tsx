@@ -6,6 +6,7 @@ import { getProjects, saveProject, deleteProject } from './lib/db';
 import type { Project } from './lib/db';
 import { ContainerViews } from './components/ContainerViews';
 import { Container3DView } from './components/Container3DView';
+import { ManualPacker } from './components/ManualPacker';
 import { translations } from './lib/translations';
 import type { Language } from './lib/translations';
 import { parseExcelFile } from './lib/excelImporter';
@@ -41,6 +42,12 @@ const applyLabelColors = (items: PacklistItem[]): PacklistItem[] => {
     return item.color !== assignedColor ? { ...item, color: assignedColor } : item;
   });
 };
+const getPrioStyle = (prio: string | number) => {
+  const p = Number(prio === 'hoch' ? 1 : prio === 'niedrig' ? 5 : prio === 'normal' ? 3 : prio);
+  if (p === 1) return { background: 'rgba(255,0,85,0.15)', color: '#ff0055', border: '1px solid rgba(255,0,85,0.4)', padding: '2px 8px', borderRadius: '4px', textShadow: '0 0 8px rgba(255,0,85,0.4)' };
+  if (p <= 3) return { background: 'rgba(0,218,243,0.1)', color: '#00daf3', border: '1px solid rgba(0,218,243,0.3)', padding: '2px 8px', borderRadius: '4px' };
+  return { background: 'rgba(173,198,255,0.1)', color: '#adc6ff', border: '1px solid rgba(173,198,255,0.2)', padding: '2px 8px', borderRadius: '4px' };
+};
 
 export default function App() {
   const [lang, setLang] = useState<Language>('de');
@@ -50,10 +57,12 @@ export default function App() {
   const [projectName, setProjectName] = useState<string>('');
   const [projectEditor, setProjectEditor] = useState<string>('');
   const [containerSelection, setContainerSelection] = useState<string>('auto');
+  const [aisleWidth, setAisleWidth] = useState<number>(0);
   const [customFleet, setCustomFleet] = useState<CustomFleetItem[]>([]);
   const [packlist, setPacklist] = useState<PacklistItem[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [groupByDescription, setGroupByDescription] = useState<boolean>(false);
+  const [manualMode, setManualMode] = useState<boolean>(false);
 
   // Auto-sync colors based on label
   useEffect(() => {
@@ -391,8 +400,8 @@ export default function App() {
 
   const result = useMemo(() => {
     if (packlist.length === 0) return null;
-    return calculateHeterogeneousPacking(packlist, containerSelection, customFleet, groupByDescription);
-  }, [packlist, containerSelection, customFleet, groupByDescription]);
+    return calculateHeterogeneousPacking(packlist, containerSelection, customFleet, groupByDescription, aisleWidth * 10);
+  }, [packlist, containerSelection, customFleet, groupByDescription, aisleWidth]);
 
   const addFleetItem = () => {
      setCustomFleet(prev => [...prev, { containerId: CONTAINERS[0].id, count: 1 }]);
@@ -439,6 +448,12 @@ export default function App() {
           <p className="subtitle">{t.appSubtitle}</p>
         </div>
         <div className="header-actions">
+          {packlist.length > 0 && !manualMode && (
+            <button type="button" onClick={() => setManualMode(true)} className="btn" style={{ background: 'rgba(0,218,243,0.15)', color: 'var(--accent)', border: '1px solid rgba(0,218,243,0.5)', padding: '0.5rem 1rem', width: 'auto', marginRight: '1rem', textShadow: '0 0 10px rgba(0,218,243,0.3)' }}>
+              🕹️ Manuelle Bepackung
+            </button>
+          )}
+
           <input type="file" id="excel-upload-header" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} style={{ display: 'none' }} />
           <label htmlFor="excel-upload-header" className="btn" style={{ background: 'rgba(59,130,246,0.2)', color: 'white', border: '1px solid var(--accent)', padding: '0.5rem 1rem', cursor: 'pointer', margin: 0, width: 'auto' }}>
             {t.btnImportExcel}
@@ -454,6 +469,9 @@ export default function App() {
         </div>
       </div>
 
+      {manualMode ? (
+         <ManualPacker packlist={packlist} goBack={() => setManualMode(false)} lang={lang} />
+      ) : (
       <div className="app-grid">
         {/* Left Column: Form Workflow */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -537,6 +555,20 @@ export default function App() {
                     ))}
                  </select>
                </div>
+
+               <div className="input-group" style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
+                 <label className="input-label" style={{ marginBottom: '8px', color: 'var(--accent)' }}>
+                   Laufgang (Aisle) freihalten
+                 </label>
+                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                   <input type="number" min="0" max="200" value={aisleWidth} onChange={e => setAisleWidth(Number(e.target.value))} className="input-field" style={{ width: '100px', padding: '0.75rem' }} />
+                   <span style={{ color: 'var(--text-secondary)' }}>cm</span>
+                 </div>
+                 <p style={{ margin: 0, marginTop: '4px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                   Ist ein Wert &gt; 0 gesetzt, reserviert die KI automatisch einen geraden Laufgang auf der rechten Containerseite.
+                 </p>
+               </div>
+
              </div>
           </div>
 
@@ -729,7 +761,7 @@ export default function App() {
                       
                       {activeItemId === item.id && (
                          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                            <div><strong>Priorität:</strong> {
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><strong>Priorität:</strong> <span style={getPrioStyle(item.priority)}>{
                               item.priority === 1 ? t.prio1 :
                               item.priority === 2 ? t.prio2 :
                               item.priority === 3 ? t.prio3 :
@@ -737,7 +769,7 @@ export default function App() {
                               item.priority === 5 ? t.prio5 :
                               item.priority === 'hoch' ? t.prio1 :
                               item.priority === 'niedrig' ? t.prio5 : t.prio3
-                            }</div>
+                            }</span></div>
                             <div><strong>Verpackung:</strong> {item.packaging}</div>
                             {item.rotatable && <div><strong>Rotierbar:</strong> Ja</div>}
                             {item.stackableBottom && <div><strong>Stapelbar:</strong> Unten</div>}
@@ -880,6 +912,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Projects Modal */}
       {showProjectsModal && (
