@@ -57,12 +57,15 @@ export default function App() {
   const [projectName, setProjectName] = useState<string>('');
   const [projectEditor, setProjectEditor] = useState<string>('');
   const [containerSelection, setContainerSelection] = useState<string>('auto');
-  const [aisleWidth, setAisleWidth] = useState<number>(0);
+  const [aisleActive, setAisleActive] = useState<boolean>(false);
+  const [aislePosition, setAislePosition] = useState<'left'|'center'|'right'>('right');
+  const [aisleWidth, setAisleWidth] = useState<number>(60);
   const [customFleet, setCustomFleet] = useState<CustomFleetItem[]>([]);
   const [packlist, setPacklist] = useState<PacklistItem[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [groupByDescription, setGroupByDescription] = useState<boolean>(false);
   const [manualMode, setManualMode] = useState<boolean>(false);
+  const [showAisleInfo, setShowAisleInfo] = useState<boolean>(false);
 
   // Auto-sync colors based on label
   useEffect(() => {
@@ -400,8 +403,8 @@ export default function App() {
 
   const result = useMemo(() => {
     if (packlist.length === 0) return null;
-    return calculateHeterogeneousPacking(packlist, containerSelection, customFleet, groupByDescription, aisleWidth * 10);
-  }, [packlist, containerSelection, customFleet, groupByDescription, aisleWidth]);
+    return calculateHeterogeneousPacking(packlist, containerSelection, customFleet, groupByDescription, aisleActive ? aisleWidth * 10 : 0, aislePosition);
+  }, [packlist, containerSelection, customFleet, groupByDescription, aisleActive, aisleWidth, aislePosition]);
 
   const addFleetItem = () => {
      setCustomFleet(prev => [...prev, { containerId: CONTAINERS[0].id, count: 1 }]);
@@ -458,7 +461,7 @@ export default function App() {
           <label htmlFor="excel-upload-header" className="btn" style={{ background: 'rgba(59,130,246,0.2)', color: 'white', border: '1px solid var(--accent)', padding: '0.5rem 1rem', cursor: 'pointer', margin: 0, width: 'auto' }}>
             {t.btnImportExcel}
           </label>
-          <button type="button" onClick={() => setShowProjectsModal(true)} className="btn" style={{ background: 'rgba(255,255,255,0.1)', width: 'auto', padding: '0.5rem 1rem' }}>
+          <button type="button" onClick={() => setShowProjectsModal(true)} className="btn" style={{ background: 'rgba(226, 181, 255, 0.15)', color: 'var(--accent-purple)', border: '1px solid rgba(226, 181, 255, 0.4)', textShadow: '0 0 10px rgba(226, 181, 255, 0.3)', width: 'auto', padding: '0.5rem 1rem' }}>
             {t.loadProjectsBtn}
           </button>
           
@@ -557,16 +560,63 @@ export default function App() {
                </div>
 
                <div className="input-group" style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
-                 <label className="input-label" style={{ marginBottom: '8px', color: 'var(--accent)' }}>
-                   Laufgang (Aisle) freihalten
-                 </label>
-                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                   <input type="number" min="0" max="200" value={aisleWidth} onChange={e => setAisleWidth(Number(e.target.value))} className="input-field" style={{ width: '100px', padding: '0.75rem' }} />
-                   <span style={{ color: 'var(--text-secondary)' }}>cm</span>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                     <label className="input-label" style={{ color: aisleActive ? 'var(--accent)' : 'var(--text-secondary)', margin: 0 }}>
+                       Laufgang (Aisle) freihalten
+                     </label>
+                     <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={aisleActive} onChange={e => setAisleActive(e.target.checked)} />
+                        {aisleActive ? 'An' : 'Aus'}
+                     </label>
                  </div>
-                 <p style={{ margin: 0, marginTop: '4px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                   Ist ein Wert &gt; 0 gesetzt, reserviert die KI automatisch einen geraden Laufgang auf der rechten Containerseite.
-                 </p>
+                 
+                 {aisleActive && (
+                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginTop: '0.5rem' }}>
+                       <div style={{ flex: 1 }}>
+                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Breite (cm)</label>
+                         <input type="number" min="10" max="200" value={aisleWidth} onChange={e => setAisleWidth(Math.max(0, Number(e.target.value)))} className="input-field" style={{ width: '100%', padding: '0.75rem' }} />
+                       </div>
+                       <div style={{ flex: 2 }}>
+                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Positionierung</label>
+                         <select value={aislePosition} onChange={e => setAislePosition(e.target.value as 'left'|'center'|'right')} className="input-field" style={{ width: '100%', padding: '0.75rem' }}>
+                            <option value="right">▶ {lang === 'de' ? 'Rechts (Standard)' : 'Right (Default)'}</option>
+                            <option value="left">◀ {lang === 'de' ? 'Links' : 'Left'}</option>
+                            <option value="center">◆ {lang === 'de' ? 'Mitte (Achtung)' : 'Center (Alert)'}</option>
+                         </select>
+                       </div>
+                       <button 
+                         type="button" 
+                         onClick={() => setShowAisleInfo(!showAisleInfo)} 
+                         style={{ background: 'rgba(0,218,243,0.1)', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.75rem', marginTop: '24px' }}
+                         title={lang === 'de' ? 'Mehr Informationen' : 'More Information'}
+                        >
+                         ?
+                       </button>
+                     </div>
+                 )}
+                 {aisleActive && showAisleInfo && (
+                    <div style={{ background: 'rgba(0,218,243,0.05)', border: '1px solid rgba(0,218,243,0.2)', padding: '0.75rem', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)', borderRadius: '8px', lineHeight: '1.4' }}>
+                        {lang === 'de' ? (
+                            <>
+                                <strong>Hinweis zur Laufgang-Logik:</strong><br/>
+                                Ein Laufgang reduziert die nutzbare Verladebreite. Er wird bevorzugt für Wartungs- oder Kontrollzwecke eingesetzt. 
+                                Bitte beachte, dass dadurch die Effizienz der Raumausnutzung sinkt und breite Packstücke evtl. nicht mehr geladen werden können.
+                            </>
+                        ) : (
+                            <>
+                                <strong>Note on Aisle Logic:</strong><br/>
+                                An aisle reduces the usable loading width. It is primarily used for maintenance or inspection purposes.
+                                Please note that this reduces space utilization efficiency and wide items may no longer fit.
+                            </>
+                        )}
+                    </div>
+                 )}
+                 {aisleActive && aislePosition === 'center' && (
+                    <div style={{ background: 'rgba(255,0,85,0.1)', borderLeft: '4px solid var(--danger)', padding: '0.75rem', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-primary)', borderRadius: '4px' }}>
+                        <strong>Achtung: Mitte-Laufgang</strong><br/>
+                        Ein mittiger Gang spaltet den Container in rechte und linke Hälfte. Packstücke, die breiter als eine dieser Hälften sind, werden vom Algorithmus abgelehnt!
+                    </div>
+                 )}
                </div>
 
              </div>

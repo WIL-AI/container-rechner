@@ -52,7 +52,7 @@ export interface PackingPlan {
 
 
 
-function findBestContainerForItems(items: PacklistItem[], containerSelection: string, groupByDescription: boolean, aisleWidthMm: number): ContainerType {
+function findBestContainerForItems(items: PacklistItem[], containerSelection: string, groupByDescription: boolean, aisleWidthMm: number, aislePosition: 'left'|'center'|'right'): ContainerType {
   const needsCraning = items.some(i => i.needsCraning);
   const needsHC = items.some(i => i.height > 2390 || (!i.rotatable && i.width > 2390 && i.length > 2390));
 
@@ -86,7 +86,7 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   let bestScore = -1;
 
   for (const c of candidates) {
-    const { packedItems, usedVolume } = packIntoContainer3D(items, c, groupByDescription, aisleWidthMm);
+    const { packedItems, usedVolume } = packIntoContainer3D(items, c, groupByDescription, aisleWidthMm, aislePosition);
     
     // Calculate a score:
     // Base score is the number of packed items (favoring greedy filling).
@@ -121,7 +121,7 @@ function findBestContainerForItems(items: PacklistItem[], containerSelection: st
   return bestContainer;
 }
 
-function packIntoContainer3D(items: PacklistItem[], container: ContainerType, groupByDescription: boolean = false, aisleWidthMm: number = 0) {
+function packIntoContainer3D(items: PacklistItem[], container: ContainerType, groupByDescription: boolean = false, aisleWidthMm: number = 0, aislePosition: 'left'|'center'|'right' = 'right') {
    let usedVolume = 0;
    let usedWeight = 0;
    const packedItems: PackedItemInfo[] = [];
@@ -168,9 +168,9 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType, gr
    // COORDINATE SYSTEM: 
    // Z=0 is Back Wall (Stirnwand)
    // Z increases towards the Door
-   let currentZ = 0;
-   let currentX = 0;
-   let currentY = 0;
+    let currentZ = 0;
+    let currentX = (aisleWidthMm > 0 && aislePosition === 'left') ? aisleWidthMm : 0;
+    let currentY = 0;
    let sliceMaxL = 0;   // Max length (Z) of items in the current slice
    let columnMaxW = 0;  // Max width (X) of items in the current column stacking upwards
 
@@ -232,14 +232,44 @@ function packIntoContainer3D(items: PacklistItem[], container: ContainerType, gr
            columnMaxW = 0;
         }
 
-        // C. Width check (move to next slice)
-        const usableW = Math.max(0, container.width - aisleWidthMm);
-        if (currentX + w > usableW) {
-           currentX = 0;
+        let effectiveStartX = (aisleWidthMm > 0 && aislePosition === 'left') ? aisleWidthMm : 0;
+        let effectiveMaxX = container.width;
+        if (aisleWidthMm > 0 && aislePosition === 'right') effectiveMaxX -= aisleWidthMm;
+
+        // C1. Center aisle interference check
+        if (aisleWidthMm > 0 && aislePosition === 'center') {
+            const minEx = (container.width / 2) - (aisleWidthMm / 2);
+            const maxEx = (container.width / 2) + (aisleWidthMm / 2);
+            
+            if ((currentX < minEx && currentX + w > minEx) || (currentX >= minEx && currentX < maxEx)) {
+                currentX = maxEx;
+                currentY = 0;
+                columnMaxW = 0;
+            }
+        }
+
+        // C2. Width check (move to next slice)
+        if (currentX + w > effectiveMaxX) {
+           currentX = effectiveStartX;
            currentY = 0;
            currentZ += sliceMaxL;
            sliceMaxL = 0;
            columnMaxW = 0;
+
+           // Re-evaluate center jump for the fresh slice
+           if (aisleWidthMm > 0 && aislePosition === 'center') {
+              const minEx = (container.width / 2) - (aisleWidthMm / 2);
+              const maxEx = (container.width / 2) + (aisleWidthMm / 2);
+              if (currentX < minEx && currentX + w > minEx) {
+                  currentX = maxEx;
+              }
+           }
+        }
+
+        // Final safety check: if we are still out of bounds after slice reset and jump checks, it doesn't fit
+        if (currentX + w > container.width || (aisleWidthMm > 0 && aislePosition === 'center' && currentX + w > effectiveMaxX)) {
+            remainingItems.push(item);
+            continue;
         }
 
         // D. Depth check (exit container)
@@ -304,7 +334,8 @@ export function calculateHeterogeneousPacking(
   containerSelection: string,
   customFleet: CustomFleetItem[] = [],
   groupByDescription: boolean = false,
-  aisleWidthMm: number = 0
+  aisleWidthMm: number = 0,
+  aislePosition: 'left'|'center'|'right' = 'right'
 ): PackingPlan {
   const plan: PackingPlan = { packedContainers: [], unpackedItems: [] };
   
@@ -330,10 +361,10 @@ export function calculateHeterogeneousPacking(
          if (fleetSequence.length === 0) break; // Fleet is exhausted
          container = fleetSequence.shift()!;
      } else {
-         container = findBestContainerForItems(currentItems, containerSelection, groupByDescription, aisleWidthMm);
+         container = findBestContainerForItems(currentItems, containerSelection, groupByDescription, aisleWidthMm, aislePosition);
      }
 
-     const { packedItems, remainingItems, usedVolume, usedWeight } = packIntoContainer3D(currentItems, container, groupByDescription, aisleWidthMm);
+     const { packedItems, remainingItems, usedVolume, usedWeight } = packIntoContainer3D(currentItems, container, groupByDescription, aisleWidthMm, aislePosition);
 
      if (packedItems.length === 0) {
         if (containerSelection === 'fleet') {
