@@ -411,10 +411,11 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 style={{
-                  width: 'auto',
+                  width: '100%',
                   height: 'auto',
                   maxWidth: '100%',
                   maxHeight: '100%',
+                  minWidth: '150px',
                   aspectRatio: `${container.width} / ${container.length}`,
                   background: 'linear-gradient(rgba(0,218,243,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,218,243,0.05) 1px, transparent 1px)',
                   backgroundSize: '30px 30px',
