@@ -18,8 +18,12 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
   const [packedItems, setPackedItems] = useState<PackedItemInfo[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   
-  // DRAG STATE for internal moves
+  // DRAG STATE for internal moves (Pointer Events)
   const [draggedIndices, setDraggedIndices] = useState<number[]>([]);
+  const [isPointerDragging, setIsPointerDragging] = useState(false);
+  const [pointerOffset, setPointerOffset] = useState({ x: 0, z: 0 }); // mm offset from item origin
+  const [ghostPos, setGhostPos] = useState<{ x: number, z: number, y: number } | null>(null);
+  const [draggedRotation, setDraggedRotation] = useState(false); // whether current drag is rotated
 
   const inventory = useMemo(() => {
     const list: PacklistItem[] = [];
@@ -37,21 +41,20 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
   const handleInventoryDragStart = (e: React.DragEvent, item: PacklistItem) => {
     e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'inventory', item }));
     e.dataTransfer.effectAllowed = 'copyMove';
-    setDraggedIndices([]);
   };
 
-  const handleFloorDragStart = (e: React.DragEvent, index: number) => {
-    console.log("Drag Start from container index", index);
-    // Find all items on top of this one (the STACK)
+  const handlePointerDown = (e: React.PointerEvent, index: number) => {
+    // Prevent delete button from triggering drag
+    if ((e.target as HTMLElement).closest('button')) return;
+
+    e.preventDefault();
     const baseItem = packedItems[index];
     const stackIndices: number[] = [index];
 
-    // Simple recursive stack finder: find items with same center/bottom footprint AND Y > baseItem.Y
     const findStack = (currentIdx: number) => {
         const current = packedItems[currentIdx];
         packedItems.forEach((pi, idx) => {
             if (stackIndices.includes(idx)) return;
-            // Check if pi is directly on top of current (within 5mm tolerance)
             const footprintMatch = Math.abs(pi.x - current.x) < 5 && Math.abs(pi.z - current.z) < 5;
             const yMatch = Math.abs(pi.y - (current.y + current.h)) < 5;
             if (footprintMatch && yMatch) {
@@ -62,9 +65,98 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     };
     findStack(index);
 
-    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'container', indices: stackIndices }));
-    e.dataTransfer.effectAllowed = 'move';
+    // Calculate pointer offset in MM relative to base item x/z
+    if (!floorRef.current) return;
+    const rect = floorRef.current.getBoundingClientRect();
+    const scaleX = container.width / rect.width;
+    const scaleZ = container.length / rect.height;
+    
+    const clickXmm = (e.clientX - rect.left) * scaleX;
+    const clickZmm = (e.clientY - rect.top) * scaleZ;
+
+    setPointerOffset({ 
+        x: clickXmm - baseItem.x, 
+        z: clickZmm - baseItem.z 
+    });
     setDraggedIndices(stackIndices);
+    setIsPointerDragging(true);
+    setDraggedRotation(false);
+    
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isPointerDragging || draggedIndices.length === 0 || !floorRef.current) return;
+
+    const rect = floorRef.current.getBoundingClientRect();
+    const scaleX = container.width / rect.width;
+    const scaleZ = container.length / rect.height;
+    
+    const currentXmm = (e.clientX - rect.left) * scaleX;
+    const currentZmm = (e.clientY - rect.top) * scaleZ;
+
+    const baseItem = packedItems[draggedIndices[0]];
+    // Target is current - initial offset
+    let tx = currentXmm - pointerOffset.x;
+    let tz = currentZmm - pointerOffset.z;
+
+    // Use current rotation dimensions
+    const curW = draggedRotation ? baseItem.l : baseItem.w;
+    const curL = draggedRotation ? baseItem.w : baseItem.l;
+
+    const otherItems = packedItems.filter((_, i) => !draggedIndices.includes(i));
+    const { mmX, mmZ, targetY } = findSafePosition(curW, curL, baseItem.h, tx, tz, otherItems);
+    
+    setGhostPos({ x: mmX, z: mmZ, y: targetY });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isPointerDragging || draggedIndices.length === 0 || !ghostPos) {
+        setIsPointerDragging(false);
+        setDraggedIndices([]);
+        setGhostPos(null);
+        return;
+    }
+
+    const indices = draggedIndices;
+    const gPos = ghostPos;
+    const isRot = draggedRotation;
+
+    setPackedItems(prev => {
+        const next = [...prev];
+        const baseItem = next[indices[0]];
+        
+        const deltaX = gPos.x - baseItem.x;
+        const deltaZ = gPos.z - baseItem.z;
+        const deltaY = gPos.y - baseItem.y;
+
+        indices.forEach(idx => {
+            let item = { ...next[idx] };
+            if (isRot) {
+                // If rotated the whole stack relative to base, we swapped w/l
+                // To keep it simple: swap local w/l of every item in stack
+                [item.w, item.l] = [item.l, item.w];
+            }
+            item.x += deltaX;
+            item.z += deltaZ;
+            item.y += deltaY;
+            next[idx] = item;
+        });
+
+        return next;
+    });
+
+    setIsPointerDragging(false);
+    setDraggedIndices([]);
+    setGhostPos(null);
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (isPointerDragging && e.code === 'Space') {
+        e.preventDefault();
+        setDraggedRotation(prev => !prev);
+    }
   };
 
   const handleDropOnFloor = (e: React.DragEvent) => {
@@ -92,11 +184,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
 
     if (data.type === 'inventory') {
         addItemToContainer(data.item, targetX, targetZ);
-    } else if (data.type === 'container') {
-        moveStackInContainer(data.indices, targetX, targetZ);
     }
-    setDraggedIndices([]);
-    console.log("Drop completed", data.type);
   };
 
   // --- LOGIC HELPERS ---
@@ -116,39 +204,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     }]);
   };
 
-  const moveStackInContainer = (indices: number[], x: number, z: number) => {
-    setPackedItems(prev => {
-        const next = [...prev];
-        const baseIndex = indices[0];
-        const baseItem = next[baseIndex];
-        
-        // Temporarily remove stack to calculate "new ground" correctly
-        const otherItems = next.filter((_, i) => !indices.includes(i));
-        const { mmX, mmZ, targetY } = findSafePosition(baseItem.w, baseItem.l, baseItem.h, x, z, otherItems);
-
-        if (targetY + baseItem.h > container.height) {
-            alert(lang === 'de' ? 'Stapel passt hier nicht in die Höhe!' : 'Stack exceeds height!');
-            return prev;
-        }
-
-        const deltaX = mmX - baseItem.x;
-        const deltaZ = mmZ - baseItem.z;
-        const deltaY = targetY - baseItem.y;
-
-        indices.forEach(idx => {
-            next[idx] = {
-                ...next[idx],
-                x: next[idx].x + deltaX,
-                z: next[idx].z + deltaZ,
-                y: next[idx].y + deltaY
-            };
-        });
-
-        return next;
-    });
-  };
-
-  const findSafePosition = (w: number, l: number, h: number, x: number, z: number, existing = packedItems) => {
+  const findSafePosition = (w: number, l: number, _h: number, x: number, z: number, existing = packedItems) => {
     let mmX = x;
     let mmZ = z;
 
@@ -206,7 +262,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
           <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
             <li><strong>Verschieben:</strong> Du kannst bereits platzierte Kisten im Container anklicken und an eine neue Position ziehen.</li>
             <li><strong>Stapel-Support:</strong> Wenn du eine Kiste verschiebst, auf der andere Kisten stehen, wird automatisch der <strong>gesamte Stapel</strong> mitbewegt!</li>
-            <li><strong>Skalierung:</strong> Die 2D-Fläche zeigt jetzt die wahre Proportion (20ft vs 40ft). Achte darauf, dass der Platz bei 20ft Containern deutlich begrenzter ist.</li>
+            <li><strong>Rotation:</strong> Halte eine Kiste gedrückt und drücke die <strong>Leertaste</strong>, um den gesamten Stapel zu drehen.</li>
+            <li><strong>Skalierung:</strong> Die 2D-Fläche zeigt jetzt die wahre Proportion (20ft vs 40ft).</li>
             <li><strong>Löschen:</strong> Nutze das kleine [X] in der Ecke einer Box zum Entfernen.</li>
           </ul>
         </div>
@@ -263,11 +320,17 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
            </div>
 
            {/* Realistic Scaling Wrapper */}
-           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', padding: '1rem', overflow: 'hidden' }}>
+           <div 
+             tabIndex={0} 
+             onKeyDown={handleKeyDown}
+             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', padding: '1rem', overflow: 'hidden', outline: 'none' }}
+           >
               <div 
                 ref={floorRef}
                 onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
                 onDrop={handleDropOnFloor}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
                 style={{
                   width: 'calc(100% - 20px)',
                   height: `${containerScale * 100}%`,
@@ -278,7 +341,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                   border: '2px solid rgba(0,218,243,0.3)',
                   boxShadow: '0 0 20px rgba(0,218,243,0.1)',
                   position: 'relative',
-                  transition: 'height 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+                  transition: 'height 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                  touchAction: 'none'
                 }}
               >
                   {packedItems.map((pi, idx) => {
@@ -292,9 +356,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                       
                       return (
                           <div key={`${pi.item.id}-${pi.x}-${pi.y}-${pi.z}`} 
-                               draggable
-                               onDragStart={(e) => handleFloorDragStart(e, idx)}
-                               onDragEnd={() => setDraggedIndices([])}
+                               onPointerDown={(e) => handlePointerDown(e, idx)}
                                style={{
                                   position: 'absolute',
                                   left: `${leftPct}%`,
@@ -302,8 +364,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                                   width: `${wPct}%`,
                                   height: `${hPct}%`,
                                   backgroundColor: pi.item.color || 'var(--accent)',
-                                  opacity: isDragging ? 0.3 : opacity,
-                                  border: isDragging ? '2px dashed var(--accent)' : '1px solid rgba(255,255,255,0.4)',
+                                  opacity: isDragging ? 0.2 : opacity,
+                                  border: isDragging ? '1px dashed var(--accent)' : '1px solid rgba(255,255,255,0.4)',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -352,6 +414,30 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                           </div>
                       );
                   })}
+
+                  {/* GHOST PREVIEW DURING DRAG */}
+                  {isPointerDragging && ghostPos && draggedIndices.length > 0 && (
+                      <div style={{
+                          position: 'absolute',
+                          left: `${(ghostPos.x / container.width) * 100}%`,
+                          top: `${(ghostPos.z / container.length) * 100}%`,
+                          width: `${((draggedRotation ? packedItems[draggedIndices[0]].l : packedItems[draggedIndices[0]].w) / container.width) * 100}%`,
+                          height: `${((draggedRotation ? packedItems[draggedIndices[0]].w : packedItems[draggedIndices[0]].l) / container.length) * 100}%`,
+                          background: 'rgba(0, 218, 243, 0.4)',
+                          border: '2px solid var(--accent)',
+                          zIndex: 2000,
+                          pointerEvents: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.7rem',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          boxShadow: '0 0 15px var(--accent)'
+                      }}>
+                        {lang === 'de' ? 'Verschieben...' : 'Moving...'}
+                      </div>
+                  )}
               </div>
            </div>
         </div>
