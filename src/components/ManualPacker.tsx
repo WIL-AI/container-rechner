@@ -35,12 +35,13 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
   // --- DRAG HANDLERS ---
 
   const handleInventoryDragStart = (e: React.DragEvent, item: PacklistItem) => {
-    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'inventory', item }));
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'inventory', item }));
     e.dataTransfer.effectAllowed = 'copyMove';
     setDraggedIndices([]);
   };
 
   const handleFloorDragStart = (e: React.DragEvent, index: number) => {
+    console.log("Drag Start from container index", index);
     // Find all items on top of this one (the STACK)
     const baseItem = packedItems[index];
     const stackIndices: number[] = [index];
@@ -61,7 +62,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     };
     findStack(index);
 
-    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'container', indices: stackIndices }));
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'container', indices: stackIndices }));
     e.dataTransfer.effectAllowed = 'move';
     setDraggedIndices(stackIndices);
   };
@@ -70,9 +71,14 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     e.preventDefault();
     if (!floorRef.current) return;
     
-    const dataStr = e.dataTransfer.getData('application/json');
+    const dataStr = e.dataTransfer.getData('text/plain');
     if (!dataStr) return;
-    const data = JSON.parse(dataStr);
+    let data;
+    try {
+        data = JSON.parse(dataStr);
+    } catch(err) {
+        return;
+    }
 
     const rect = floorRef.current.getBoundingClientRect();
     const dropX = e.clientX - rect.left;
@@ -90,6 +96,7 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         moveStackInContainer(data.indices, targetX, targetZ);
     }
     setDraggedIndices([]);
+    console.log("Drop completed", data.type);
   };
 
   // --- LOGIC HELPERS ---
@@ -282,11 +289,12 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                       const opacity = 0.6 + Math.min(0.4, pi.y / 1500);
                       
                       const isDragging = draggedIndices.includes(idx);
-
+                      
                       return (
-                          <div key={idx} 
+                          <div key={`${pi.item.id}-${pi.x}-${pi.y}-${pi.z}`} 
                                draggable
                                onDragStart={(e) => handleFloorDragStart(e, idx)}
+                               onDragEnd={() => setDraggedIndices([])}
                                style={{
                                   position: 'absolute',
                                   left: `${leftPct}%`,
@@ -305,31 +313,42 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                                   cursor: 'grab',
                                   boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
                                   transition: 'transform 0.1s',
-                                  zIndex: Math.floor(pi.y / 10) + 1
+                                  zIndex: Math.floor(pi.y / 10) + 1,
+                                  userSelect: 'none',
+                                  pointerEvents: 'auto'
                                }}>
                                 #{pi.loadingOrder}
 
-                                {/* DELETE ICON */}
-                                <div 
-                                    onClick={(e) => { e.stopPropagation(); removePackedItem(idx); }}
+                                {/* DELETE ICON - Small and isolated */}
+                                <button 
+                                    type="button"
+                                    onClick={(e) => { 
+                                        e.preventDefault();
+                                        e.stopPropagation(); 
+                                        console.log("Delete button clicked for index", idx);
+                                        removePackedItem(idx); 
+                                    }}
                                     style={{
                                         position: 'absolute',
                                         top: 0,
                                         right: 0,
-                                        width: '18px',
-                                        height: '18px',
+                                        width: '16px',
+                                        height: '16px',
                                         background: 'var(--danger)',
                                         color: 'white',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '12px',
+                                        fontSize: '10px',
+                                        border: 'none',
                                         borderRadius: '0 0 0 4px',
                                         cursor: 'pointer',
-                                        zIndex: 100
+                                        padding: 0,
+                                        lineHeight: 1,
+                                        zIndex: 1000
                                     }}>
                                     ✕
-                                </div>
+                                </button>
                           </div>
                       );
                   })}
