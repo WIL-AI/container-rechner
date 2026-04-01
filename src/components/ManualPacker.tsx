@@ -184,9 +184,15 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         e.preventDefault();
         setDraggedRotation(prev => !prev);
     }
+    // Keyboard shortcuts for selected items
+    if (selectedIndices.length > 0 && !isPointerDragging) {
+        if (e.code === 'Space') { e.preventDefault(); handleRotate3D('horizontal'); }
+        if (e.key.toLowerCase() === 'x') { e.preventDefault(); handleRotate3D('flipL'); }
+        if (e.key.toLowerCase() === 'y') { e.preventDefault(); handleRotate3D('flipW'); }
+    }
   };
 
-  const handleRotateSelected = () => {
+  const handleRotate3D = (type: 'horizontal' | 'flipL' | 'flipW') => {
     if (selectedIndices.length === 0) return;
 
     setPackedItems(prev => {
@@ -194,14 +200,31 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         const baseIndex = selectedIndices[0];
         const baseItem = next[baseIndex];
 
-        // Check if rotation fits in height
+        let targetW = baseItem.w;
+        let targetL = baseItem.l;
+        let targetH = baseItem.h;
+
+        if (type === 'horizontal') { [targetW, targetL] = [targetL, targetW]; }
+        if (type === 'flipL') { [targetL, targetH] = [targetH, targetL]; }
+        if (type === 'flipW') { [targetW, targetH] = [targetH, targetW]; }
+
+        // Check if rotation fits in height and bounds
         const otherItems = next.filter((_, i) => !selectedIndices.includes(i));
-        const { targetY } = findSafePosition(baseItem.l, baseItem.w, baseItem.h, baseItem.x, baseItem.z, otherItems);
+        const { targetY } = findSafePosition(targetW, targetL, targetH, baseItem.x, baseItem.z, otherItems);
         
-        const dy = targetY - baseItem.y;
+        const deltaY = targetY - baseItem.y;
         let exceeds = false;
         selectedIndices.forEach(idx => {
-            if (next[idx].y + dy + next[idx].h > container.height) exceeds = true;
+            let itemH = next[idx].h;
+            if (type === 'flipL' && idx === baseIndex) itemH = next[idx].l; // Simplistic: only base item flips dimensions for now in stack
+            if (type === 'flipW' && idx === baseIndex) itemH = next[idx].w;
+            // Actually, for a stack to be valid after flip, all items must flip?
+            // Usually flipping is for single items. We'll flip the whole stack's dimensions.
+            let nextH = next[idx].h;
+            if (type === 'flipL') nextH = next[idx].l;
+            if (type === 'flipW') nextH = next[idx].w;
+
+            if (next[idx].y + deltaY + nextH > container.height) exceeds = true;
         });
 
         if (exceeds) {
@@ -209,10 +232,11 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
             return prev;
         }
 
-        const deltaY = targetY - baseItem.y;
         selectedIndices.forEach(idx => {
             let item = { ...next[idx] };
-            [item.w, item.l] = [item.l, item.w];
+            if (type === 'horizontal') [item.w, item.l] = [item.l, item.w];
+            if (type === 'flipL') [item.l, item.h] = [item.h, item.l];
+            if (type === 'flipW') [item.w, item.h] = [item.h, item.w];
             item.y += deltaY;
             next[idx] = item;
         });
@@ -324,7 +348,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
           <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
             <li><strong>Verschieben:</strong> Du kannst bereits platzierte Kisten im Container anklicken und an eine neue Position ziehen.</li>
             <li><strong>Stapel-Support:</strong> Wenn du eine Kiste verschiebst, auf der andere Kisten stehen, wird automatisch der <strong>gesamte Stapel</strong> mitbewegt!</li>
-            <li><strong>Rotation:</strong> Halte eine Kiste gedrückt und drücke die <strong>Leertaste</strong>, um den gesamten Stapel zu drehen.</li>
+            <li><strong>3D-Rotation:</strong> Nutze die Buttons in der Toolbar, um Kisten zu drehen oder auf die Seite/Stirnseite zu kippen.</li>
+            <li><strong>Hotkeys:</strong> [Leertaste] = Drehen, [X] = Längs kippen, [Y] = Quer kippen.</li>
             <li><strong>Skalierung:</strong> Die 2D-Fläche zeigt jetzt die wahre Proportion (20ft vs 40ft).</li>
             <li><strong>Löschen:</strong> Nutze das kleine [X] in der Ecke einer Box zum Entfernen.</li>
           </ul>
@@ -397,15 +422,37 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                 </span>
                 <button 
                   className="btn" 
-                  onClick={handleRotateSelected}
+                  onClick={() => handleRotate3D('horizontal')}
                   style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--accent)', color: 'var(--bg-deep)' }}
+                  title="90° Ebene [Space]"
                 >
-                  🔄 90° {lang === 'de' ? 'Drehen' : 'Rotate'}
+                  🔄 {lang === 'de' ? 'Ebene' : 'Plano'}
                 </button>
                 <button 
                   className="btn" 
+                  onClick={() => handleRotate3D('flipL')}
+                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--accent)', color: 'var(--bg-deep)' }}
+                  title="Längs kippen [X]"
+                >
+                  📐 {lang === 'de' ? 'Kippen Längs' : 'Flip Long'}
+                </button>
+                <button 
+                  className="btn" 
+                  onClick={() => handleRotate3D('flipW')}
+                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--accent)', color: 'var(--bg-deep)' }}
+                  title="Quer kippen [Y]"
+                >
+                  📐 {lang === 'de' ? 'Kippen Quer' : 'Flip Short'}
+                </button>
+                {packedItems[selectedIndices[0]]?.item.rotatable === false && (
+                    <span style={{ fontSize: '0.8rem', color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        ⚠️ {lang === 'de' ? 'Nicht rotierbar' : 'Not rotatable'}
+                    </span>
+                )}
+                <button 
+                  className="btn" 
                   onClick={() => setSelectedIndices([])}
-                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.1)' }}
+                  style={{ width: 'auto', padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.1)', marginLeft: 'auto' }}
                 >
                   {lang === 'de' ? 'Abbrechen' : 'Cancel'}
                 </button>
