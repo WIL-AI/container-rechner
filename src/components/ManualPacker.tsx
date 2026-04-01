@@ -10,8 +10,8 @@ interface ManualPackerProps {
   lang: 'de' | 'en';
 }
 
-// Global reference for scaling (40ft High Cube)
-const MAX_CONTAINER_LENGTH = 12025; 
+// Global reference for scaling (no longer needed for fixed aspect ratio)
+// const MAX_CONTAINER_LENGTH = 12025; 
 
 export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
   const [container, setContainer] = useState<ContainerType>(CONTAINERS[0]);
@@ -67,14 +67,17 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     };
     findStack(index);
 
-    // Calculate pointer offset in MM relative to base item x/z
+    // Calculate pointer offset in MM 
+    // In horizontal view: 
+    // e.clientX is Z (length)
+    // e.clientY is X (width)
     if (!floorRef.current) return;
     const rect = floorRef.current.getBoundingClientRect();
-    const scaleX = container.width / rect.width;
-    const scaleZ = container.length / rect.height;
+    const scaleZ = container.length / rect.width;
+    const scaleX = container.width / rect.height;
     
-    const clickXmm = (e.clientX - rect.left) * scaleX;
-    const clickZmm = (e.clientY - rect.top) * scaleZ;
+    const clickZmm = (e.clientX - rect.left) * scaleZ;
+    const clickXmm = (e.clientY - rect.top) * scaleX;
 
     setPointerOffset({ 
         x: clickXmm - baseItem.x, 
@@ -92,11 +95,11 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     if (!isPointerDragging || draggedIndices.length === 0 || !floorRef.current) return;
 
     const rect = floorRef.current.getBoundingClientRect();
-    const scaleX = container.width / rect.width;
-    const scaleZ = container.length / rect.height;
+    const scaleZ = container.length / rect.width;
+    const scaleX = container.width / rect.height;
     
-    const currentXmm = (e.clientX - rect.left) * scaleX;
-    const currentZmm = (e.clientY - rect.top) * scaleZ;
+    const currentZmm = (e.clientX - rect.left) * scaleZ;
+    const currentXmm = (e.clientY - rect.top) * scaleX;
 
     const baseItem = packedItems[draggedIndices[0]];
     // Target is current - initial offset
@@ -160,8 +163,6 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         indices.forEach(idx => {
             let item = { ...next[idx] };
             if (isRot) {
-                // If rotated the whole stack relative to base, we swapped w/l
-                // To keep it simple: swap local w/l of every item in stack
                 [item.w, item.l] = [item.l, item.w];
             }
             item.x += deltaX;
@@ -215,7 +216,6 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
         const deltaY = targetY - baseItem.y;
         let exceeds = false;
         selectedIndices.forEach(idx => {
-            // Usually flipping is for single items. We'll flip the whole stack's dimensions.
             let nextH = next[idx].h;
             if (type === 'flipL') nextH = next[idx].l;
             if (type === 'flipW') nextH = next[idx].w;
@@ -258,11 +258,11 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
     const dropX = e.clientX - rect.left;
     const dropY = e.clientY - rect.top;
 
-    const scaleX = container.width / rect.width;
-    const scaleZ = container.length / rect.height;
+    const scaleZ = container.length / rect.width;
+    const scaleX = container.width / rect.height;
 
-    let targetX = Math.round(dropX * scaleX);
-    let targetZ = Math.round(dropY * scaleZ);
+    let targetZ = Math.round(dropX * scaleZ);
+    let targetX = Math.round(dropY * scaleX);
 
     if (data.type === 'inventory') {
         addItemToContainer(data.item, targetX, targetZ);
@@ -317,9 +317,6 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
           return newArr.map((pi, idx) => ({...pi, loadingOrder: idx + 1}));
       });
   };
-
-  // --- UI VALUES ---
-  const containerScale = container.length / MAX_CONTAINER_LENGTH;
 
   return (
     <div style={{ padding: '1rem' }} className="animate-in">
@@ -402,7 +399,6 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                </button>
            </div>
 
-           {/* Realistic Scaling Wrapper */}
            <div 
              tabIndex={0} 
              onKeyDown={handleKeyDown}
@@ -415,24 +411,23 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 style={{
-                  width: 'calc(100% - 20px)',
-                  height: `${containerScale * 100}%`,
-                  maxHeight: '100%',
-                  aspectRatio: `${container.width} / ${container.length}`,
+                  width: '100%',
+                  height: '100%',
+                  aspectRatio: `${container.length} / ${container.width}`,
                   background: 'linear-gradient(rgba(0,218,243,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,218,243,0.05) 1px, transparent 1px)',
                   backgroundSize: '30px 30px',
                   border: '2px solid rgba(0,218,243,0.3)',
                   boxShadow: '0 0 20px rgba(0,218,243,0.1)',
                   position: 'relative',
-                  transition: 'height 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                  transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
                   touchAction: 'none'
                 }}
               >
                   {packedItems.map((pi, idx) => {
-                      const leftPct = (pi.x / container.width) * 100;
-                      const topPct = (pi.z / container.length) * 100;
-                      const wPct = (pi.w / container.width) * 100;
-                      const hPct = (pi.l / container.length) * 100;
+                      const leftPct = (pi.z / container.length) * 100;
+                      const topPct = (pi.x / container.width) * 100;
+                      const itemWPct = (pi.l / container.length) * 100;
+                      const itemHPct = (pi.w / container.width) * 100;
                       const opacity = 0.6 + Math.min(0.4, pi.y / 1500);
                       
                       const isDragging = draggedIndices.includes(idx);
@@ -445,8 +440,8 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                                   position: 'absolute',
                                   left: `${leftPct}%`,
                                   top: `${topPct}%`,
-                                  width: `${wPct}%`,
-                                  height: `${hPct}%`,
+                                  width: `${itemWPct}%`,
+                                  height: `${itemHPct}%`,
                                   backgroundColor: pi.item.color || 'var(--accent)',
                                   opacity: isDragging ? 0.2 : opacity,
                                   border: isSelected ? '2px solid #fff' : (isDragging ? '1px dashed var(--accent)' : '1px solid rgba(255,255,255,0.4)'),
@@ -503,10 +498,10 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                   {isPointerDragging && ghostPos && draggedIndices.length > 0 && (
                       <div style={{
                           position: 'absolute',
-                          left: `${(ghostPos.x / container.width) * 100}%`,
-                          top: `${(ghostPos.z / container.length) * 100}%`,
-                          width: `${((draggedRotation ? packedItems[draggedIndices[0]].l : packedItems[draggedIndices[0]].w) / container.width) * 100}%`,
-                          height: `${((draggedRotation ? packedItems[draggedIndices[0]].w : packedItems[draggedIndices[0]].l) / container.length) * 100}%`,
+                          left: `${(ghostPos.z / container.length) * 100}%`,
+                          top: `${(ghostPos.x / container.width) * 100}%`,
+                          width: `${((draggedRotation ? packedItems[draggedIndices[0]].w : packedItems[draggedIndices[0]].l) / container.length) * 100}%`,
+                          height: `${((draggedRotation ? packedItems[draggedIndices[0]].l : packedItems[draggedIndices[0]].w) / container.width) * 100}%`,
                           background: isInvalidGhost ? 'rgba(255, 68, 68, 0.4)' : 'rgba(0, 218, 243, 0.4)',
                           border: `2px solid ${isInvalidGhost ? 'var(--danger)' : 'var(--accent)'}`,
                           zIndex: 2000,
@@ -524,60 +519,62 @@ export function ManualPacker({ packlist, goBack, lang }: ManualPackerProps) {
                   )}
               </div>
 
-              {/* ROTATION TOOLBAR BELOW GRID */}
+              {/* ROTATION TOOLBAR BELOW GRID (Compact) */}
               {selectedIndices.length > 0 && (
                 <div className="animate-in" style={{ 
-                    marginTop: '1.5rem',
-                    width: '100%',
+                    marginTop: '1rem',
+                    width: 'auto',
+                    maxWidth: '100%',
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '1rem', 
-                    padding: '0.75rem 1rem', 
+                    gap: '0.75rem', 
+                    padding: '0.5rem 0.75rem', 
                     background: 'rgba(0,218,243,0.1)', 
                     borderRadius: '8px', 
                     border: '1px solid var(--accent)',
-                    boxShadow: '0 0 15px rgba(0,218,243,0.2)'
+                    boxShadow: '0 0 10px rgba(0,218,243,0.2)',
+                    fontSize: '0.85rem'
                 }}>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                    {lang === 'de' ? 'Objekt' : 'Item'} #{packedItems[selectedIndices[0]].loadingOrder}:
+                    <span style={{ color: 'var(--accent)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                    #{packedItems[selectedIndices[0]].loadingOrder}:
                     </span>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button 
                             className="btn" 
                             onClick={() => handleRotate3D('horizontal')}
-                            style={{ width: 'auto', padding: '0.4rem 0.8rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.85rem' }}
+                            style={{ width: 'auto', padding: '0.3rem 0.6rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.8rem' }}
                             title="90° Ebene [Space]"
                         >
-                            🔄 {lang === 'de' ? 'Ebene' : 'Floor'}
+                            🔄 {lang === 'de' ? 'Eb' : 'Fl'}
                         </button>
                         <button 
                             className="btn" 
                             onClick={() => handleRotate3D('flipL')}
-                            style={{ width: 'auto', padding: '0.4rem 0.8rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.85rem' }}
+                            style={{ width: 'auto', padding: '0.3rem 0.6rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.8rem' }}
                             title="Längs kippen [X]"
                         >
-                            📐 {lang === 'de' ? 'Längs' : 'Long'}
+                            📐 {lang === 'de' ? 'L' : 'L'}
                         </button>
                         <button 
                             className="btn" 
                             onClick={() => handleRotate3D('flipW')}
-                            style={{ width: 'auto', padding: '0.4rem 0.8rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.85rem' }}
+                            style={{ width: 'auto', padding: '0.3rem 0.6rem', background: 'var(--accent)', color: 'var(--bg-deep)', fontSize: '0.8rem' }}
                             title="Quer kippen [Y]"
                         >
-                            📐 {lang === 'de' ? 'Quer' : 'Short'}
+                            📐 {lang === 'de' ? 'Q' : 'S'}
                         </button>
                     </div>
                     
                     {packedItems[selectedIndices[0]]?.item.rotatable === false && (
-                        <span style={{ fontSize: '0.75rem', color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}>
-                            ⚠️ {lang === 'de' ? 'Nicht rotierbar' : 'Not rotatable'}
+                        <span style={{ fontSize: '0.7rem', color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                            ⚠️
                         </span>
                     )}
                     
                     <button 
                     className="btn" 
                     onClick={() => setSelectedIndices([])}
-                    style={{ width: 'auto', padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.1)', marginLeft: 'auto', fontSize: '0.85rem' }}
+                    style={{ width: 'auto', padding: '0.3rem 0.7rem', background: 'rgba(255,255,255,0.1)', marginLeft: '0.5rem', fontSize: '0.8rem' }}
                     >
                     ✕
                     </button>
